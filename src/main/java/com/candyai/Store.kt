@@ -19,6 +19,11 @@ object Store {
         get() = sp.getString("guest_secret", null)
         set(v) { sp.edit().putString("guest_secret", v).apply() }
 
+    /** Candy on the phone's screen (over every app) is switched on. */
+    var overlayOn: Boolean
+        get() = sp.getBoolean("overlay_on", false)
+        set(v) { sp.edit().putBoolean("overlay_on", v).apply() }
+
     var serverUrl: String
         get() = sp.getString("server", null)?.takeIf { it.isNotBlank() }
             ?: BuildConfig.SERVER_URL.ifBlank { "http://127.0.0.1:8788" }

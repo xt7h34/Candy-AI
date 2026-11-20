@@ -283,7 +283,7 @@ fun CandyFloatingHost(
 
 /** Candy peeking from behind the screen edge (mirrored on the left edge): she blinks and breathes, her mouth moves when she answers, and she gets bored and sleeps. */
 @Composable
-private fun CandyPeek(width: Dp, height: Dp, animated: Boolean, talkTick: Int, talkMs: Long, mirror: Boolean) {
+internal fun CandyPeek(width: Dp, height: Dp, animated: Boolean, talkTick: Int, talkMs: Long, mirror: Boolean) {
     var mood by remember { mutableStateOf(Mood.Awake) }
     var blinkEyes by remember { mutableStateOf<Eyes?>(null) }
     var actEyes by remember { mutableStateOf<Eyes?>(null) }

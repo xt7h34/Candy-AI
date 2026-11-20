@@ -28,6 +28,13 @@
     <string name="ai_name">كاندي</string>
     <string name="ai_new_chat">محادثة جديدة</string>
     <string name="ai_new_chat_q">تمسح المحادثة دي وتبدأ من جديد؟</string>
+    <string name="overlay_channel">كاندي على الشاشة</string>
+    <string name="overlay_hint">كاندي تطل من حافة الشاشة فوق أي تطبيق. دوس عليها تسألها، وسحبها تحركها، وزقها في الحافة تخبّيها. ضغطة مطوّلة تفتح التطبيق.</string>
+    <string name="overlay_notif_stop">إيقاف</string>
+    <string name="overlay_notif_text">دوس لفتح كاندي</string>
+    <string name="overlay_notif_title">كاندي ظاهرة على الشاشة</string>
+    <string name="overlay_perm">فعّل \"العرض فوق التطبيقات الأخرى\" لكاندي وارجع</string>
+    <string name="overlay_title">كاندي على شاشة الموبايل</string>
     <string name="ai_share_all">المحادثة كاملة</string>
     <string name="ai_share_fail">معرفتش أجهّز الصورة للمشاركة.</string>
     <string name="ai_share_one">الرد ده</string>

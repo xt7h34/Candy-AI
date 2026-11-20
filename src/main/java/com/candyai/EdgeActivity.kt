@@ -140,6 +140,16 @@ import org.json.JSONObject
 
 /** Candy Edge: a small ask-Candy panel that opens over whatever app you are in (shortcut, quick-settings tile, or the assistant gesture). */
 class EdgeActivity : ComponentActivity() {
+    override fun onStart() {
+        super.onStart()
+        CandyOverlay.activityStarted()
+    }
+
+    override fun onStop() {
+        CandyOverlay.activityStopped()
+        super.onStop()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -170,7 +180,7 @@ fun EdgePanel(onClose: () -> Unit, onOpenFull: (String?) -> Unit, onReply: (Int)
     val cs = MaterialTheme.colorScheme
 
     var convId by remember { mutableStateOf<String?>(null) }
-    var question by remember { mutableStateOf("") }
+    val turns = remember { mutableStateListOf<AiMsg>() }   // what was asked and answered in this panel, oldest first
     var reply by remember { mutableStateOf("") }
     var input by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
@@ -178,7 +188,7 @@ fun EdgePanel(onClose: () -> Unit, onOpenFull: (String?) -> Unit, onReply: (Int)
     var recording by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
     var jobId by remember { mutableStateOf<String?>(null) }
-    var sttOn by remember { mutableStateOf(false) }
+    val sttOn = true   // Candy's voice is always on, like Elite
     val recorder = remember { VoiceRecorder(ctx) }
     val focus = remember { FocusRequester() }
     val scroll = rememberScrollState()
@@ -215,7 +225,7 @@ fun EdgePanel(onClose: () -> Unit, onOpenFull: (String?) -> Unit, onReply: (Int)
         sending = true
         error = ""
         input = ""
-        question = text
+        turns.add(AiMsg(-System.nanoTime(), "user", text, System.currentTimeMillis()))
         reply = ""
         scope.launch {
             var sent = false
@@ -224,10 +234,15 @@ fun EdgePanel(onClose: () -> Unit, onOpenFull: (String?) -> Unit, onReply: (Int)
                 val job = Api.sendMessage(cid, text)
                 sent = true
                 follow(job)
-                if (reply.isNotEmpty()) onReply(reply.length)
+                if (reply.isNotEmpty()) {
+                    val done = reply
+                    turns.add(AiMsg(-System.nanoTime(), "assistant", done, System.currentTimeMillis()))
+                    reply = ""
+                    onReply(done.length)
+                }
             } catch (e: Exception) {
                 error = errorMessage(ctx, e)
-                if (!sent) { input = text; question = "" }
+                if (!sent) { input = text; if (turns.isNotEmpty()) turns.removeAt(turns.lastIndex) }
             } finally {
                 sending = false
                 jobId = null
@@ -289,13 +304,10 @@ fun EdgePanel(onClose: () -> Unit, onOpenFull: (String?) -> Unit, onReply: (Int)
     }
 
     LaunchedEffect(Unit) {
-        try { sttOn = Api.voiceStatus().sttOn } catch (_: Exception) { }
-    }
-    LaunchedEffect(Unit) {
         delay(200)
         try { focus.requestFocus() } catch (_: Exception) { }
     }
-    LaunchedEffect(reply.length, question) { scroll.scrollTo(scroll.maxValue) }
+    LaunchedEffect(reply.length, turns.size) { scroll.scrollTo(scroll.maxValue) }
     DisposableEffect(Unit) { onDispose { recorder.cancel() } }
 
     val noRipple = remember { MutableInteractionSource() }
@@ -324,9 +336,9 @@ fun EdgePanel(onClose: () -> Unit, onOpenFull: (String?) -> Unit, onReply: (Int)
                 }
             }
 
-            if (question.isNotEmpty() || reply.isNotEmpty() || sending || listening) {
+            if (turns.isNotEmpty() || reply.isNotEmpty() || sending || listening) {
                 Column(Modifier.heightIn(max = 320.dp).verticalScroll(scroll), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (question.isNotEmpty()) AiBubble(AiMsg(-1L, "user", question, System.currentTimeMillis()))
+                    for (t in turns) AiBubble(t)
                     if (reply.isNotEmpty()) {
                         AiBubble(AiMsg(-2L, "assistant", reply, System.currentTimeMillis()))
                     } else if (sending || listening) {

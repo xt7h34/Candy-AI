@@ -1,6 +1,16 @@
 package com.candyai
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.text.format.DateUtils
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.compose.material3.Switch
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -194,13 +204,44 @@ fun ConversationsScreen(onOpen: (String) -> Unit, onNew: () -> Unit, onOpenMemor
 @Composable
 fun SettingsDialog(onDismiss: () -> Unit, onSaved: () -> Unit) {
     val c = LocalCandy.current
+    val ctx = LocalContext.current
     var url by remember { mutableStateOf(Store.serverUrl) }
+    var overlayOn by remember { mutableStateOf(Store.overlayOn && android.provider.Settings.canDrawOverlays(ctx)) }
+    val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    fun setOverlay(on: Boolean) {
+        if (!on) {
+            Store.overlayOn = false
+            CandyOverlay.stop(ctx)
+            overlayOn = false
+        } else if (android.provider.Settings.canDrawOverlays(ctx)) {
+            Store.overlayOn = true
+            CandyOverlay.start(ctx)
+            overlayOn = true
+            if (Build.VERSION.SDK_INT >= 33 &&
+                ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+            ) {
+                notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        } else {
+            // first time: send the person to the "display over other apps" screen; she appears when they come back
+            Store.overlayOn = true
+            Toast.makeText(ctx, ctx.getString(R.string.overlay_perm), Toast.LENGTH_LONG).show()
+            ctx.startActivity(
+                Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + ctx.packageName))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+            onDismiss()
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = c.surface,
         titleContentColor = c.text,
         title = { Text(stringResource(R.string.settings)) },
         text = {
+          Column {
             OutlinedTextField(
                 value = url,
                 onValueChange = { url = it },
@@ -216,6 +257,14 @@ fun SettingsDialog(onDismiss: () -> Unit, onSaved: () -> Unit) {
                     unfocusedLabelColor = c.subtext,
                 ),
             )
+            Row(Modifier.fillMaxWidth().padding(top = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.overlay_title), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.overlay_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+                }
+                Switch(checked = overlayOn, onCheckedChange = { setOverlay(it) }, modifier = Modifier.padding(start = 8.dp))
+            }
+          }
         },
         confirmButton = {
             TextButton(onClick = {

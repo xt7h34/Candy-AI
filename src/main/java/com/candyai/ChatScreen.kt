@@ -356,7 +356,8 @@ fun ChatScreen(startId: String?, onBack: () -> Unit, onOpenMemory: () -> Unit) {
 
     // the whole conversation on the screen (only messages the server already saved)
     fun shareChat() {
-        val list = msgs.filter { it.n > 0 }.map { AiSnapMsg(it.text, it.mine) }
+        // your own messages count too (a message you just sent has no server id yet); only a reply still being written is left out
+        val list = msgs.filter { it.mine || it.n > 0 }.map { AiSnapMsg(it.text, it.mine) }
         if (list.isEmpty()) return
         scope.launch {
             if (!shareAiConversation(ctx, list, snapColors)) error = ctx.getString(R.string.ai_share_fail)
@@ -418,7 +419,7 @@ fun ChatScreen(startId: String?, onBack: () -> Unit, onOpenMemory: () -> Unit) {
                 done.first.delete()
                 val t = Api.transcribe(Base64.encodeToString(bytes, Base64.NO_WRAP)).trim()
                 listening = false
-                if (t.isEmpty()) error = ctx.getString(R.string.ai_stt_empty) else sendText(t, voice.ttsOn)
+                if (t.isEmpty()) error = ctx.getString(R.string.ai_stt_empty) else sendText(t, true)
             } catch (e: Exception) {
                 error = errorMessage(ctx, e)
             } finally {
@@ -503,7 +504,7 @@ fun ChatScreen(startId: String?, onBack: () -> Unit, onOpenMemory: () -> Unit) {
                 AppIconButton(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back), onBack, tint = cs.onBackground)
             }
 
-            if (voice.ttsOn && voice.ttsLeft <= 5) {
+            if (voice.ttsLimit > 0 && voice.ttsLeft <= 5) {
                 Muted(stringResource(R.string.ai_voice_left, voice.ttsLeft, voice.ttsLimit), Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
             }
 
@@ -561,7 +562,7 @@ fun ChatScreen(startId: String?, onBack: () -> Unit, onOpenMemory: () -> Unit) {
                         if (m.memAdded.isNotEmpty() || m.memRemoved.isNotEmpty()) AiMemChips(m, onOpenMemory)
                         if (!m.mine && m.n > 0 && !(sending && i == msgs.lastIndex)) {
                             AiActionRow(
-                                voice = voice.ttsOn,
+                                voice = true,
                                 playing = VoicePlayer.playingKey == "ai#${m.n}",
                                 loading = voiceBusy == m.n,
                                 onVoice = { speak(m.n) },
@@ -606,7 +607,7 @@ fun ChatScreen(startId: String?, onBack: () -> Unit, onOpenMemory: () -> Unit) {
                     )
                 }
             } else {
-                val showMic = voice.sttOn && input.isBlank()
+                val showMic = input.isBlank()
                 val canSend = !listening && (showMic || input.isNotBlank())
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),

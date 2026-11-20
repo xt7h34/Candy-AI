@@ -42,6 +42,17 @@ class MainActivity : ComponentActivity() {
     }
 
     // every touch counts: Candy gets bored when nobody touches the screen
+    override fun onStart() {
+        super.onStart()
+        CandyOverlay.activityStarted()
+        CandyOverlay.ensure(this)   // she comes back after the permission screen, or after the phone restarted the app
+    }
+
+    override fun onStop() {
+        CandyOverlay.activityStopped()
+        super.onStop()
+    }
+
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         CandyIdle.touched()
         return super.dispatchTouchEvent(ev)
