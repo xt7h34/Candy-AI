@@ -28,4 +28,9 @@ object Store {
         get() = sp.getString("server", null)?.takeIf { it.isNotBlank() }
             ?: BuildConfig.SERVER_URL.ifBlank { "http://127.0.0.1:8788" }
         set(v) { sp.edit().putString("server", v).apply() }
+
+    /** Which edge the conversations drawer opens from: "right" (default, matches the Arabic layout) or "left". */
+    var drawerSide: String
+        get() = sp.getString("drawer_side", "right").let { if (it == "left") "left" else "right" }
+        set(v) { sp.edit().putString("drawer_side", if (v == "left") "left" else "right").apply() }
 }

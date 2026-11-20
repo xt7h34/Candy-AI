@@ -51,10 +51,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MoreVert
@@ -129,7 +129,13 @@ import org.json.JSONObject
 
 /** The conversation with Candy: she is the wallpaper, replies are written word by word, and every reply has its action row. */
 @Composable
-fun ChatScreen(startId: String?, onBack: () -> Unit, onOpenMemory: () -> Unit) {
+fun ChatScreen(
+    startId: String?,
+    menuOnLeft: Boolean,
+    onMenu: () -> Unit,
+    onConversation: (String) -> Unit,
+    onOpenMemory: () -> Unit,
+) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val cs = MaterialTheme.colorScheme
@@ -274,7 +280,7 @@ fun ChatScreen(startId: String?, onBack: () -> Unit, onOpenMemory: () -> Unit) {
         scope.launch {
             var sent = false
             try {
-                val cid = convId ?: Api.createConversation().also { convId = it }
+                val cid = convId ?: Api.createConversation().also { convId = it; onConversation(it) }
                 val job = Api.sendMessage(cid, text)
                 sent = true
                 msgs.add(AiMsg(-System.nanoTime(), "user", text, System.currentTimeMillis()))
@@ -493,15 +499,16 @@ fun ChatScreen(startId: String?, onBack: () -> Unit, onOpenMemory: () -> Unit) {
     ) {
         CandyStage(animated, talkTick, talkMs, lastActive)
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
-            // only the back arrow, so Candy stays fully visible
+            // only the menu button, so Candy stays fully visible; it sits on the same side as the drawer
             Box(
-                Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                Modifier.align(if (menuOnLeft) Alignment.End else Alignment.Start)
+                    .padding(horizontal = 10.dp, vertical = 8.dp)
                     .size(48.dp)
                     .clip(CircleShape)
                     .background(cs.background.copy(alpha = 0.55f)),
                 contentAlignment = Alignment.Center,
             ) {
-                AppIconButton(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back), onBack, tint = cs.onBackground)
+                AppIconButton(Icons.Rounded.Menu, stringResource(R.string.menu), onMenu, tint = cs.onBackground)
             }
 
             if (voice.ttsLimit > 0 && voice.ttsLeft <= 5) {

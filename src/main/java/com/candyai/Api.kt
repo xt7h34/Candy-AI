@@ -11,7 +11,7 @@ import java.security.SecureRandom
 
 class ApiException(val code: String, val status: Int) : Exception(code)
 
-data class Conversation(val id: String, val title: String, val updatedAt: Long)
+data class Conversation(val id: String, val title: String, val updatedAt: Long, val pinned: Boolean = false)
 
 /** One message. [n] is the server id; a negative [n] means it was just sent and has no id yet. */
 class AiMsg(
@@ -124,13 +124,21 @@ object Api {
         val arr = json("GET", "/conversations").getJSONArray("conversations")
         return (0 until arr.length()).map {
             val o = arr.getJSONObject(it)
-            Conversation(o.getString("id"), o.getString("title"), o.getLong("updated_at"))
+            Conversation(o.getString("id"), o.getString("title"), o.getLong("updated_at"), o.optInt("pinned", 0) == 1)
         }
     }
 
     suspend fun createConversation(): String = json("POST", "/conversations", JSONObject()).getString("id")
 
     suspend fun deleteConversation(id: String) { json("DELETE", "/conversations/$id") }
+
+    suspend fun renameConversation(id: String, title: String) {
+        json("POST", "/conversations/$id/rename", JSONObject().put("title", title))
+    }
+
+    suspend fun pinConversation(id: String, pinned: Boolean) {
+        json("POST", "/conversations/$id/pin", JSONObject().put("pinned", pinned))
+    }
 
     suspend fun messages(id: String): List<AiMsg> {
         val arr = json("GET", "/conversations/$id/messages").getJSONArray("messages")

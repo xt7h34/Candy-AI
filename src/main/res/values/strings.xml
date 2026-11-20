@@ -32,4 +32,15 @@
     <string name="edge_shortcut_short">اسأل كاندي</string>
     <string name="edge_shortcut_long">اسأل كاندي بسرعة</string>
     <string name="edge_tile_label">كاندي</string>
+    <string name="menu">القايمة</string>
+    <string name="chat_pin">تثبيت</string>
+    <string name="chat_unpin">إلغاء التثبيت</string>
+    <string name="chat_rename">إعادة تسمية</string>
+    <string name="chat_rename_title">اسم المحادثة</string>
+    <string name="settings_memory_hint">اللي كاندي فاكراه عنك</string>
+    <string name="settings_drawer_side">مكان قايمة المحادثات</string>
+    <string name="settings_drawer_side_hint">القايمة بتفتح من الناحية اللي تختارها</string>
+    <string name="side_right">اليمين</string>
+    <string name="side_left">الشمال</string>
+    <string name="settings_saved">اتحفظ</string>
 </resources>
