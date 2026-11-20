@@ -141,8 +141,6 @@ fun ChatScreen(startId: String?, onBack: () -> Unit, onOpenMemory: () -> Unit) {
     var input by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
-    var menu by remember { mutableStateOf(false) }
-    var confirmDelete by remember { mutableStateOf(false) }
     var shareFor by remember { mutableStateOf<AiMsg?>(null) }
     var jobId by remember { mutableStateOf<String?>(null) }
     var talkTick by remember { mutableStateOf(0) }
@@ -367,19 +365,6 @@ fun ChatScreen(startId: String?, onBack: () -> Unit, onOpenMemory: () -> Unit) {
 
     fun send() = sendText(input.trim(), false)
 
-    fun deleteChat() {
-        val id = convId
-        if (id == null) { onBack(); return }
-        scope.launch {
-            try {
-                Api.deleteConversation(id)
-                onBack()
-            } catch (e: Exception) {
-                error = errorMessage(ctx, e)
-            }
-        }
-    }
-
     // ───── talking to her: record, turn it into text on the server, send it and hear the answer ─────
     fun startRecording() {
         if (recorder.start()) {
@@ -507,35 +492,16 @@ fun ChatScreen(startId: String?, onBack: () -> Unit, onOpenMemory: () -> Unit) {
     ) {
         CandyStage(animated, talkTick, talkMs, lastActive)
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
-            // header
-            Row(
-                Modifier.fillMaxWidth().background(cs.background.copy(alpha = 0.55f)).padding(horizontal = 4.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            // only the back arrow, so Candy stays fully visible
+            Box(
+                Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(cs.background.copy(alpha = 0.55f)),
+                contentAlignment = Alignment.Center,
             ) {
                 AppIconButton(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back), onBack, tint = cs.onBackground)
-                AiAvatar(40.dp)
-                Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(stringResource(R.string.ai_name), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = cs.onBackground)
-                        AiBadge()
-                    }
-                    Text(stringResource(R.string.ai_subtitle), style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
-                }
-                Box {
-                    AppIconButton(Icons.Rounded.MoreVert, null, { menu = true }, tint = cs.onBackground)
-                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.ai_mem_menu)) },
-                            onClick = { menu = false; onOpenMemory() },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_delete_chat)) },
-                            onClick = { menu = false; confirmDelete = true },
-                        )
-                    }
-                }
             }
-            Box(Modifier.fillMaxWidth().height(1.dp).background(CandyBrand.hairline()))
 
             if (voice.ttsOn && voice.ttsLeft <= 5) {
                 Muted(stringResource(R.string.ai_voice_left, voice.ttsLeft, voice.ttsLimit), Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
@@ -706,23 +672,6 @@ fun ChatScreen(startId: String?, onBack: () -> Unit, onOpenMemory: () -> Unit) {
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { shareFor = null }) { Text(stringResource(R.string.cancel), color = cs.onSurfaceVariant) }
-            },
-        )
-    }
-
-    if (confirmDelete) {
-        AlertDialog(
-            onDismissRequest = { confirmDelete = false },
-            containerColor = cs.surfaceContainerHigh,
-            titleContentColor = cs.onSurface,
-            textContentColor = cs.onSurfaceVariant,
-            title = { Text(stringResource(R.string.delete_title)) },
-            text = { Text(stringResource(R.string.delete_body)) },
-            confirmButton = {
-                TextButton(onClick = { confirmDelete = false; deleteChat() }) { Text(stringResource(R.string.delete), color = cs.primary) }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel), color = cs.onSurfaceVariant) }
             },
         )
     }
