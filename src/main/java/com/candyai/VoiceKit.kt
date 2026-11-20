@@ -1,5 +1,6 @@
 package com.candyai
 
+import androidx.compose.foundation.layout.statusBarsPadding
 import android.content.Context
 import android.media.MediaPlayer
 import android.media.MediaRecorder

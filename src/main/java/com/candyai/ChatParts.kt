@@ -1,5 +1,6 @@
 package com.candyai
 
+import androidx.compose.foundation.layout.statusBarsPadding
 import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
