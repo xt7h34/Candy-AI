@@ -56,11 +56,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
@@ -103,8 +105,9 @@ fun ConversationsDrawer(
         }
     }
 
-    // the inner edge (the one facing the chat) is the rounded one; the sheet itself is laid out right-to-left
-    val shape = if (side == "left") RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp)
+    // the inner edge (the one facing the chat) is the rounded one; "start" is the right edge in Arabic and the left edge in English
+    val roundStart = (side == "left") == (LocalLayoutDirection.current == LayoutDirection.Rtl)
+    val shape = if (roundStart) RoundedCornerShape(topStart = 24.dp, bottomStart = 24.dp)
     else RoundedCornerShape(topEnd = 24.dp, bottomEnd = 24.dp)
 
     ModalDrawerSheet(

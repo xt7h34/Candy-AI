@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -140,6 +141,10 @@ import org.json.JSONObject
 
 /** Candy Edge: a small ask-Candy panel that opens over whatever app you are in (shortcut, quick-settings tile, or the assistant gesture). */
 class EdgeActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(Lang.wrap(newBase))
+    }
+
     override fun onStart() {
         super.onStart()
         CandyOverlay.activityStarted()
@@ -156,7 +161,7 @@ class EdgeActivity : ComponentActivity() {
         Store.init(applicationContext)
         setContent {
             CandyTheme {
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                CompositionLocalProvider(LocalLayoutDirection provides Lang.direction(this@EdgeActivity)) {
                     EdgePanel(
                         onClose = { finish() },
                         onOpenFull = { id ->
@@ -349,7 +354,9 @@ fun EdgePanel(onClose: () -> Unit, onOpenFull: (String?) -> Unit, onReply: (Int)
             if (recording) Muted(stringResource(R.string.edge_recording))
             if (error.isNotBlank()) ErrorText(error)
 
+            val buttonFirst = (Store.sendSide == "left") != (LocalLayoutDirection.current == LayoutDirection.Rtl)
             Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val inputBox: @Composable RowScope.() -> Unit = {
                 Surface(shape = MaterialTheme.shapes.extraLarge, color = cs.surfaceContainerHigh, modifier = Modifier.weight(1f)) {
                     Box(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                         if (input.isEmpty()) Text(stringResource(R.string.ai_hint), color = cs.onSurfaceVariant)
@@ -363,6 +370,8 @@ fun EdgePanel(onClose: () -> Unit, onOpenFull: (String?) -> Unit, onReply: (Int)
                         )
                     }
                 }
+                }
+                val actionButton: @Composable () -> Unit = {
                 val showMic = sttOn && input.isBlank() && !sending
                 val active = sending || recording || (!listening && (showMic || input.isNotBlank()))
                 Surface(
@@ -380,6 +389,14 @@ fun EdgePanel(onClose: () -> Unit, onOpenFull: (String?) -> Unit, onReply: (Int)
                             else -> Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = stringResource(R.string.send), tint = tint)
                         }
                     }
+                }
+                }
+                if (buttonFirst) {
+                    actionButton()
+                    inputBox()
+                } else {
+                    inputBox()
+                    actionButton()
                 }
             }
         }

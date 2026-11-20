@@ -29,8 +29,18 @@ object Store {
             ?: BuildConfig.SERVER_URL.ifBlank { "http://127.0.0.1:8788" }
         set(v) { sp.edit().putString("server", v).apply() }
 
-    /** Which edge the conversations drawer opens from: "right" (default, matches the Arabic layout) or "left". */
+    /** The app language: "ar" (default) or "en". Lang reads the same key before Store exists. */
+    var language: String
+        get() = sp.getString("lang", "ar").let { if (it == "en") "en" else "ar" }
+        set(v) { sp.edit().putString("lang", if (v == "en") "en" else "ar").apply() }
+
+    /** Which edge the conversations drawer opens from. Until the person picks one it follows the language (right for Arabic, left for English). */
     var drawerSide: String
-        get() = sp.getString("drawer_side", "right").let { if (it == "left") "left" else "right" }
+        get() = (sp.getString("drawer_side", null) ?: if (language == "en") "left" else "right").let { if (it == "left") "left" else "right" }
         set(v) { sp.edit().putString("drawer_side", if (v == "left") "left" else "right").apply() }
+
+    /** Which edge the send / voice button sits on in the message box. Default: left for Arabic (as before), right for English. */
+    var sendSide: String
+        get() = (sp.getString("send_side", null) ?: if (language == "en") "right" else "left").let { if (it == "left") "left" else "right" }
+        set(v) { sp.edit().putString("send_side", if (v == "left") "left" else "right").apply() }
 }

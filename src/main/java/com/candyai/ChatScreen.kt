@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -132,6 +133,7 @@ import org.json.JSONObject
 fun ChatScreen(
     startId: String?,
     menuOnLeft: Boolean,
+    sendOnLeft: Boolean,
     onMenu: () -> Unit,
     onConversation: (String) -> Unit,
     onOpenMemory: () -> Unit,
@@ -501,7 +503,7 @@ fun ChatScreen(
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
             // only the menu button, so Candy stays fully visible; it sits on the same side as the drawer
             Box(
-                Modifier.align(if (menuOnLeft) Alignment.End else Alignment.Start)
+                Modifier.align(if (menuOnLeft == (LocalLayoutDirection.current == LayoutDirection.Rtl)) Alignment.End else Alignment.Start)
                     .padding(horizontal = 10.dp, vertical = 8.dp)
                     .size(48.dp)
                     .clip(CircleShape)
@@ -616,11 +618,14 @@ fun ChatScreen(
             } else {
                 val showMic = input.isBlank()
                 val canSend = !listening && (showMic || input.isNotBlank())
+                // which side the send / voice button sits on (picked in the settings)
+                val buttonFirst = sendOnLeft != (LocalLayoutDirection.current == LayoutDirection.Rtl)
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.Bottom,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    val inputBox: @Composable RowScope.() -> Unit = {
                     Surface(shape = MaterialTheme.shapes.extraLarge, color = cs.surfaceContainerHigh, modifier = Modifier.weight(1f)) {
                         Box(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                             if (input.isEmpty()) {
@@ -636,7 +641,9 @@ fun ChatScreen(
                             )
                         }
                     }
+                    }
                     // while she writes this button stops her; otherwise it sends, or records when the box is empty
+                    val actionButton: @Composable () -> Unit = {
                     val active = sending || canSend
                     Surface(
                         shape = CircleShape,
@@ -653,6 +660,14 @@ fun ChatScreen(
                                 else -> Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = stringResource(R.string.send), tint = tint)
                             }
                         }
+                    }
+                    }
+                    if (buttonFirst) {
+                        actionButton()
+                        inputBox()
+                    } else {
+                        inputBox()
+                        actionButton()
                     }
                 }
             }

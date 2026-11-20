@@ -1,13 +1,8 @@
 package com.candyai
 
-import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -61,13 +56,14 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 
 /** Everything adjustable lives here, so new options can simply be added as new cards. */
 @Composable
 fun SettingsScreen(
     side: String,
     onSide: (String) -> Unit,
+    sendSide: String,
+    onSendSide: (String) -> Unit,
     onClose: () -> Unit,
     onOpenMemory: () -> Unit,
     onServerChanged: () -> Unit,
@@ -76,7 +72,6 @@ fun SettingsScreen(
     val ctx = LocalContext.current
     var url by remember { mutableStateOf(Store.serverUrl) }
     var overlayOn by remember { mutableStateOf(Store.overlayOn && android.provider.Settings.canDrawOverlays(ctx)) }
-    val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     fun setOverlay(on: Boolean) {
         if (!on) {
@@ -87,11 +82,6 @@ fun SettingsScreen(
             Store.overlayOn = true
             CandyOverlay.start(ctx)
             overlayOn = true
-            if (Build.VERSION.SDK_INT >= 33 &&
-                ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-            ) {
-                notifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
         } else {
             // first time: send the person to the "display over other apps" screen; she appears when they come back
             Store.overlayOn = true
@@ -125,6 +115,17 @@ fun SettingsScreen(
                 }
             }
 
+            // language
+            SettingsCard {
+                val current = Store.language
+                Text(stringResource(R.string.settings_language), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.settings_language_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    LangChip(stringResource(R.string.lang_ar), current == "ar", Modifier.weight(1f)) { if (current != "ar") Lang.change(ctx, "ar") }
+                    LangChip(stringResource(R.string.lang_en), current == "en", Modifier.weight(1f)) { if (current != "en") Lang.change(ctx, "en") }
+                }
+            }
+
             // Candy over the other apps
             SettingsCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -143,6 +144,16 @@ fun SettingsScreen(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     SideOption(left = false, selected = side != "left", label = stringResource(R.string.side_right)) { onSide("right") }
                     SideOption(left = true, selected = side == "left", label = stringResource(R.string.side_left)) { onSide("left") }
+                }
+            }
+
+            // which side the send / voice button is on
+            SettingsCard {
+                Text(stringResource(R.string.settings_send_side), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.settings_send_side_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    SendOption(left = false, selected = sendSide != "left", label = stringResource(R.string.side_right)) { onSendSide("right") }
+                    SendOption(left = true, selected = sendSide == "left", label = stringResource(R.string.side_left)) { onSendSide("left") }
                 }
             }
 
@@ -235,6 +246,65 @@ private fun SideOption(left: Boolean, selected: Boolean, label: String, onClick:
                 ) {
                     Box(Modifier.fillMaxWidth().height(14.dp).clip(RoundedCornerShape(7.dp)).background(c.subtext.copy(alpha = 0.25f)))
                     Box(Modifier.fillMaxWidth(0.7f).height(14.dp).clip(RoundedCornerShape(7.dp)).background(c.userBubble.copy(alpha = 0.55f)))
+                }
+            }
+        }
+        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (selected) {
+                Icon(Icons.Rounded.CheckCircle, null, tint = c.accent, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+            }
+            Text(label, color = if (selected) c.text else c.subtext, fontSize = 13.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+        }
+    }
+}
+
+@Composable
+private fun LangChip(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val c = LocalCandy.current
+    val shape = RoundedCornerShape(14.dp)
+    Box(
+        modifier.clip(shape)
+            .background(if (selected) c.accent.copy(alpha = 0.18f) else c.bg)
+            .border(if (selected) 2.dp else 1.dp, if (selected) c.accent else c.border, shape)
+            .clickable(onClick = onClick)
+            .padding(vertical = 14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, color = if (selected) c.text else c.subtext, fontSize = 15.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+    }
+}
+
+/** A tiny phone with the message box at the bottom: the round button on the left or on the right. */
+@Composable
+private fun SendOption(left: Boolean, selected: Boolean, label: String, onClick: () -> Unit) {
+    val c = LocalCandy.current
+    val frame = RoundedCornerShape(14.dp)
+    Column(
+        Modifier.clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick).padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Box(
+                Modifier.size(width = 96.dp, height = 150.dp)
+                    .clip(frame)
+                    .background(c.bg)
+                    .border(if (selected) 2.5.dp else 1.dp, if (selected) c.accent else c.border, frame),
+            ) {
+                Column(Modifier.align(Alignment.TopStart).fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Box(Modifier.fillMaxWidth(0.65f).height(14.dp).clip(RoundedCornerShape(7.dp)).background(c.subtext.copy(alpha = 0.25f)))
+                    Box(Modifier.align(Alignment.End).fillMaxWidth(0.55f).height(14.dp).clip(RoundedCornerShape(7.dp)).background(c.userBubble.copy(alpha = 0.55f)))
+                    Box(Modifier.fillMaxWidth(0.8f).height(14.dp).clip(RoundedCornerShape(7.dp)).background(c.subtext.copy(alpha = 0.25f)))
+                }
+                Row(
+                    Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    val circle: @Composable () -> Unit = { Box(Modifier.size(22.dp).clip(RoundedCornerShape(11.dp)).background(c.accent)) }
+                    if (left) circle()
+                    Box(Modifier.weight(1f).height(22.dp).clip(RoundedCornerShape(11.dp)).background(c.surface).border(1.dp, c.border, RoundedCornerShape(11.dp)))
+                    if (!left) circle()
                 }
             }
         }

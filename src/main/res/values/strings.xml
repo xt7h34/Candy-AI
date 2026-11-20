@@ -43,4 +43,10 @@
     <string name="side_right">اليمين</string>
     <string name="side_left">الشمال</string>
     <string name="settings_saved">اتحفظ</string>
+    <string name="settings_send_side">مكان زرار الإرسال والصوت</string>
+    <string name="settings_send_side_hint">الزرار اللي بيرسل رسالتك أو يسجّل صوتك</string>
+    <string name="settings_language">اللغة</string>
+    <string name="settings_language_hint">لغة التطبيق. وكاندي بترد بنفس اللغة اللي بتكتب بيها.</string>
+    <string name="lang_ar" translatable="false">العربية</string>
+    <string name="lang_en" translatable="false">English</string>
 </resources>

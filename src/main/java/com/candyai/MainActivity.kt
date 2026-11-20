@@ -1,5 +1,6 @@
 package com.candyai
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.MotionEvent
@@ -23,6 +24,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.LayoutDirection
@@ -33,15 +35,20 @@ class MainActivity : ComponentActivity() {
     // a conversation the ask panel handed over ("open the full chat")
     private var pendingConv by mutableStateOf<String?>(null)
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(Lang.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         Store.init(applicationContext)
-        pendingConv = intent?.getStringExtra("open_conv")
+        // not after a restart (language change): the intent still carries the old request
+        if (savedInstanceState == null) pendingConv = intent?.getStringExtra("open_conv")
         setContent {
             CandyTheme {
-                // The app is Arabic-first, so the whole interface is right-to-left.
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                // right-to-left for Arabic, left-to-right for English
+                CompositionLocalProvider(LocalLayoutDirection provides Lang.direction(this@MainActivity)) {
                     CandyApp(pendingConv) { pendingConv = null }
                 }
             }
@@ -77,16 +84,19 @@ class MainActivity : ComponentActivity() {
 fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
     val c = LocalCandy.current
     val scope = rememberCoroutineScope()
+    val appDir = LocalLayoutDirection.current
     val drawerState = rememberDrawerState(DrawerValue.Closed)
 
     // the chat always starts on a fresh conversation; picking one in the drawer re-creates the chat screen with it
-    var startId by remember { mutableStateOf<String?>(null) }
-    var activeId by remember { mutableStateOf<String?>(null) }
+    // saved across a restart, so changing the language in the settings brings you back to the same chat and the same page
+    var startId by rememberSaveable { mutableStateOf<String?>(null) }
+    var activeId by rememberSaveable { mutableStateOf<String?>(null) }
     var chatKey by remember { mutableIntStateOf(0) }
     var listKey by remember { mutableIntStateOf(0) }
     var memoryOpen by remember { mutableStateOf(false) }
-    var settingsOpen by remember { mutableStateOf(false) }
+    var settingsOpen by rememberSaveable { mutableStateOf(false) }
     var side by remember { mutableStateOf(Store.drawerSide) }
+    var sendSide by remember { mutableStateOf(Store.sendSide) }
 
     fun openChat(id: String?) {
         startId = id
@@ -107,12 +117,12 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
 
     Box(Modifier.fillMaxSize().background(c.bg)) {
         // the drawer docks to the start edge of the layout direction around it, so that direction picks the side;
-        // everything inside is put back to right-to-left
+        // everything inside is put back to the app's own direction
         CompositionLocalProvider(LocalLayoutDirection provides if (side == "left") LayoutDirection.Ltr else LayoutDirection.Rtl) {
             ModalNavigationDrawer(
                 drawerState = drawerState,
                 drawerContent = {
-                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                    CompositionLocalProvider(LocalLayoutDirection provides appDir) {
                         ConversationsDrawer(
                             side = side,
                             activeId = activeId,
@@ -132,12 +142,13 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
                     }
                 },
             ) {
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                CompositionLocalProvider(LocalLayoutDirection provides appDir) {
                     Box(Modifier.fillMaxSize().background(c.bg)) {
                         key(chatKey) {
                             ChatScreen(
                                 startId = startId,
                                 menuOnLeft = side == "left",
+                                sendOnLeft = sendSide == "left",
                                 onMenu = { scope.launch { drawerState.open() } },
                                 onConversation = { activeId = it },
                                 onOpenMemory = { memoryOpen = true },
@@ -156,6 +167,11 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
                 onSide = {
                     side = it
                     Store.drawerSide = it
+                },
+                sendSide = sendSide,
+                onSendSide = {
+                    sendSide = it
+                    Store.sendSide = it
                 },
                 onClose = { settingsOpen = false },
                 onOpenMemory = { memoryOpen = true },

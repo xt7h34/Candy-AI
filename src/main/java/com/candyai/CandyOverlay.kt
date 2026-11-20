@@ -1,5 +1,6 @@
 package com.candyai
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -55,8 +56,9 @@ import kotlin.math.abs
 
 /**
  * Candy Edge, the floating Candy: she peeks from the edge of the phone's screen, over every app.
- * It needs "Display over other apps" (the person allows it once) and a small ongoing notification, which Android requires
- * for anything that stays on screen. She hides while one of this app's own screens is open (inside the app the
+ * It needs "Display over other apps" (the person allows it once). Android makes any service that keeps running show an
+ * ongoing notification, so it is made as quiet as possible: lowest importance, no badge, hidden on the lock screen, and the
+ * app never asks for the notification permission (on Android 13+ that keeps it out of the notification shade). She hides while one of this app's own screens is open (inside the app the
  * in-app Candy is there instead).
  */
 object CandyOverlay {
@@ -170,6 +172,10 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
         return START_STICKY
     }
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(Lang.wrap(newBase))
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -189,8 +195,13 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
 
     private fun goForeground() {
         val nm = getSystemService(NotificationManager::class.java)
+        // the earlier channel could not be changed any more, so the quieter one has a new id
+        nm.deleteNotificationChannel("candy_overlay")
         nm.createNotificationChannel(
-            NotificationChannel(CHANNEL, getString(R.string.overlay_channel), NotificationManager.IMPORTANCE_MIN),
+            NotificationChannel(CHANNEL, getString(R.string.overlay_channel), NotificationManager.IMPORTANCE_MIN).apply {
+                setShowBadge(false)
+                lockscreenVisibility = Notification.VISIBILITY_SECRET
+            },
         )
         val stop = PendingIntent.getService(
             this, 1,
@@ -210,6 +221,10 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
             .addAction(0, getString(R.string.overlay_notif_stop), stop)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setSilent(true)
+            .setShowWhen(false)
+            .setVisibility(NotificationCompat.VISIBILITY_SECRET)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .build()
         if (Build.VERSION.SDK_INT >= 34) {
             startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
@@ -365,7 +380,7 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
     }
 
     private companion object {
-        const val CHANNEL = "candy_overlay"
+        const val CHANNEL = "candy_overlay_quiet"
         const val NOTIF_ID = 4801
         const val ACTION_STOP = "com.candyai.OVERLAY_STOP"
     }
