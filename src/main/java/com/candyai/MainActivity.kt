@@ -2,6 +2,7 @@ package com.candyai
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -17,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.platform.LocalLayoutDirection
 
@@ -37,6 +39,12 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    // every touch counts: Candy gets bored when nobody touches the screen
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        CandyIdle.touched()
+        return super.dispatchTouchEvent(ev)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -74,6 +82,13 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
                 ChatScreen(s.id, onBack = { screen = Screen.Home }, onOpenMemory = { memoryOpen = true })
             }
         }
+        // Candy peeking from the screen edge, on the home screen only (in a chat she is already the wallpaper)
+        CandyFloatingHost(
+            visible = screen is Screen.Home && !memoryOpen,
+            bottomInset = 130.dp,
+            onOpenFull = { id -> screen = Screen.Chat(id) },
+            modifier = Modifier.fillMaxSize(),
+        )
         // on top of everything, so the chat underneath (and a reply being written) is not lost
         if (memoryOpen) {
             BackHandler { memoryOpen = false }

@@ -164,7 +164,7 @@ class EdgeActivity : ComponentActivity() {
 }
 
 @Composable
-fun EdgePanel(onClose: () -> Unit, onOpenFull: (String?) -> Unit) {
+fun EdgePanel(onClose: () -> Unit, onOpenFull: (String?) -> Unit, onReply: (Int) -> Unit = {}) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val cs = MaterialTheme.colorScheme
@@ -224,6 +224,7 @@ fun EdgePanel(onClose: () -> Unit, onOpenFull: (String?) -> Unit) {
                 val job = Api.sendMessage(cid, text)
                 sent = true
                 follow(job)
+                if (reply.isNotEmpty()) onReply(reply.length)
             } catch (e: Exception) {
                 error = errorMessage(ctx, e)
                 if (!sent) { input = text; question = "" }
