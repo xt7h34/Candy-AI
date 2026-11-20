@@ -27,4 +27,9 @@
     <string name="mem_err_sensitive">ما أقدرش أحفظ معلومة حساسة زي الإيميل أو الأرقام الطويلة.</string>
     <string name="mem_err_too_long">المعلومة طويلة، اختصرها شوية.</string>
     <string name="menu_delete_chat">حذف المحادثة</string>
+    <string name="edge_open_full">افتح الشات كامل</string>
+    <string name="edge_recording">بسمعك… اضغط تاني لما تخلّص</string>
+    <string name="edge_shortcut_short">اسأل كاندي</string>
+    <string name="edge_shortcut_long">اسأل كاندي بسرعة</string>
+    <string name="edge_tile_label">كاندي</string>
 </resources>
