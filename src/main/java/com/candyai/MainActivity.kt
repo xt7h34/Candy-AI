@@ -43,15 +43,24 @@ sealed interface Screen {
 fun CandyApp() {
     val c = LocalCandy.current
     var screen by remember { mutableStateOf<Screen>(Screen.Home) }
+    var memoryOpen by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize().background(c.bg)) {
         when (val s = screen) {
             is Screen.Home -> ConversationsScreen(
                 onOpen = { screen = Screen.Chat(it) },
                 onNew = { screen = Screen.Chat(null) },
+                onOpenMemory = { memoryOpen = true },
             )
             is Screen.Chat -> {
                 BackHandler { screen = Screen.Home }
-                ChatScreen(s.id, onBack = { screen = Screen.Home })
+                ChatScreen(s.id, onBack = { screen = Screen.Home }, onOpenMemory = { memoryOpen = true })
+            }
+        }
+        // on top of everything, so the chat underneath (and a reply being written) is not lost
+        if (memoryOpen) {
+            BackHandler { memoryOpen = false }
+            Box(Modifier.fillMaxSize().background(c.bg)) {
+                MemoryScreen(onBack = { memoryOpen = false })
             }
         }
     }

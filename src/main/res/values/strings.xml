@@ -23,4 +23,8 @@
     <string name="err_busy">كاندي لسه بترد على رسالتك اللي فاتت.</string>
     <string name="err_reply">حصلت مشكلة وكاندي ما قدرتش تكمّل الرد.</string>
     <string name="err_generic">حصلت مشكلة. حاول تاني.</string>
+    <string name="mem_err_dup">دي محفوظة عندي قبل كده.</string>
+    <string name="mem_err_sensitive">ما أقدرش أحفظ معلومة حساسة زي الإيميل أو الأرقام الطويلة.</string>
+    <string name="mem_err_too_long">المعلومة طويلة، اختصرها شوية.</string>
+    <string name="menu_delete_chat">حذف المحادثة</string>
 </resources>

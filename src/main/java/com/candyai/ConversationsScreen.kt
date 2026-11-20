@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Psychology
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -52,7 +53,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 
 @Composable
-fun ConversationsScreen(onOpen: (String) -> Unit, onNew: () -> Unit) {
+fun ConversationsScreen(onOpen: (String) -> Unit, onNew: () -> Unit, onOpenMemory: () -> Unit) {
     val c = LocalCandy.current
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -81,6 +82,9 @@ fun ConversationsScreen(onOpen: (String) -> Unit, onNew: () -> Unit) {
                 color = c.text, fontSize = 26.sp, fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f),
             )
+            IconButton(onClick = onOpenMemory) {
+                Icon(Icons.Rounded.Psychology, contentDescription = stringResource(R.string.ai_mem_title), tint = c.subtext)
+            }
             IconButton(onClick = { showSettings = true }) {
                 Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.settings), tint = c.subtext)
             }

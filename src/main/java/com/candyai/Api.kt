@@ -12,24 +12,62 @@ import java.security.SecureRandom
 class ApiException(val code: String, val status: Int) : Exception(code)
 
 data class Conversation(val id: String, val title: String, val updatedAt: Long)
-data class Msg(val role: String, val text: String)
-data class PollResult(
+
+/** One message. [n] is the server id; a negative [n] means it was just sent and has no id yet. */
+class AiMsg(
+    val n: Long,
+    val role: String,
+    val text: String,
+    val at: Long,
+    val memAdded: List<String> = emptyList(),
+    val memRemoved: List<String> = emptyList(),
+    /** 1 = liked, -1 = disliked, 0 = nothing. */
+    val react: Int = 0,
+) {
+    val mine: Boolean get() = role == "user"
+    fun withReact(v: Int) = AiMsg(n, role, text, at, memAdded, memRemoved, v)
+    fun withText(t: String) = AiMsg(n, role, t, at, memAdded, memRemoved, react)
+}
+
+class PollResult(
     val status: String,
     val error: String?,
     val full: Boolean,
     val text: String,
     val delta: String,
     val next: Int,
+    val final: String?,
+    val memAdded: List<String>,
+    val memRemoved: List<String>,
+    val messageId: Long,
 )
 
+class VoiceStatus(val ttsOn: Boolean, val ttsLeft: Int, val ttsLimit: Int, val sttOn: Boolean)
+class MemItem(val id: Long, val text: String)
+class MemState(val items: List<MemItem>, val on: Boolean, val max: Int)
+
+private fun memLists(mem: JSONObject?): Pair<List<String>, List<String>> {
+    val added = ArrayList<String>()
+    mem?.optJSONArray("a")?.let { a ->
+        for (i in 0 until a.length()) a.optJSONObject(i)?.optString("text")?.takeIf { it.isNotBlank() }?.let { added.add(it) }
+    }
+    val removed = ArrayList<String>()
+    mem?.optJSONArray("r")?.let { a ->
+        for (i in 0 until a.length()) a.optString(i).takeIf { it.isNotBlank() }?.let { removed.add(it) }
+    }
+    return added to removed
+}
+
 object Api {
-    private suspend fun call(
+    private class Raw(val status: Int, val bytes: ByteArray)
+
+    private suspend fun raw(
         method: String,
         path: String,
         body: JSONObject? = null,
         auth: Boolean = true,
         readTimeoutMs: Int = 15000,
-    ): JSONObject = withContext(Dispatchers.IO) {
+    ): Raw = withContext(Dispatchers.IO) {
         val conn = URL(Store.serverUrl.trimEnd('/') + path).openConnection() as HttpURLConnection
         try {
             conn.requestMethod = method
@@ -44,13 +82,16 @@ object Api {
             }
             val status = conn.responseCode
             val stream = if (status in 200..299) conn.inputStream else conn.errorStream
-            val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } ?: "{}"
-            val json = try { JSONObject(text) } catch (e: Exception) { JSONObject() }
-            if (status !in 200..299) throw ApiException(json.optString("error", "http_$status"), status)
-            json
+            Raw(status, stream?.use { it.readBytes() } ?: ByteArray(0))
         } finally {
             conn.disconnect()
         }
+    }
+
+    private fun parse(r: Raw): JSONObject {
+        val json = try { JSONObject(String(r.bytes, Charsets.UTF_8)) } catch (e: Exception) { JSONObject() }
+        if (r.status !in 200..299) throw ApiException(json.optString("error", "http_${r.status}"), r.status)
+        return json
     }
 
     private fun newSecret(): String {
@@ -61,57 +102,56 @@ object Api {
 
     private suspend fun login() {
         val secret = Store.guestSecret ?: newSecret().also { Store.guestSecret = it }
-        val r = call("POST", "/auth/guest", JSONObject().put("secret", secret), auth = false)
+        val r = parse(raw("POST", "/auth/guest", JSONObject().put("secret", secret), auth = false))
         Store.token = r.getString("token")
     }
 
-    /** Calls with the saved token; logs in first if there is none, and once more if the server says 401. */
-    private suspend fun authed(
-        method: String,
-        path: String,
-        body: JSONObject? = null,
-        readTimeoutMs: Int = 15000,
-    ): JSONObject {
+    /** Runs a request with the saved token; logs in first if there is none, and once more if the server says 401. */
+    private suspend fun <T> authed(block: suspend () -> T): T {
         if (Store.token == null) login()
         return try {
-            call(method, path, body, readTimeoutMs = readTimeoutMs)
+            block()
         } catch (e: ApiException) {
-            if (e.status == 401) {
-                login()
-                call(method, path, body, readTimeoutMs = readTimeoutMs)
-            } else throw e
+            if (e.status == 401) { login(); block() } else throw e
         }
     }
 
+    private suspend fun json(method: String, path: String, body: JSONObject? = null, readTimeoutMs: Int = 15000): JSONObject =
+        authed { parse(raw(method, path, body, readTimeoutMs = readTimeoutMs)) }
+
+    // ───── conversations ─────
     suspend fun conversations(): List<Conversation> {
-        val arr = authed("GET", "/conversations").getJSONArray("conversations")
+        val arr = json("GET", "/conversations").getJSONArray("conversations")
         return (0 until arr.length()).map {
             val o = arr.getJSONObject(it)
             Conversation(o.getString("id"), o.getString("title"), o.getLong("updated_at"))
         }
     }
 
-    suspend fun createConversation(): String = authed("POST", "/conversations", JSONObject()).getString("id")
+    suspend fun createConversation(): String = json("POST", "/conversations", JSONObject()).getString("id")
 
-    suspend fun deleteConversation(id: String) {
-        authed("DELETE", "/conversations/$id")
-    }
+    suspend fun deleteConversation(id: String) { json("DELETE", "/conversations/$id") }
 
-    suspend fun messages(id: String): List<Msg> {
-        val arr = authed("GET", "/conversations/$id/messages").getJSONArray("messages")
+    suspend fun messages(id: String): List<AiMsg> {
+        val arr = json("GET", "/conversations/$id/messages").getJSONArray("messages")
         return (0 until arr.length()).map {
             val o = arr.getJSONObject(it)
-            Msg(o.getString("role"), o.getString("content"))
+            val (a, r) = memLists(o.optJSONObject("mem"))
+            AiMsg(o.getLong("id"), o.getString("role"), o.getString("content"), o.getLong("created_at"), a, r, o.optInt("react", 0))
         }
     }
 
-    /** Starts a reply and returns the job id right away. */
+    // ───── replies (streaming) ─────
     suspend fun sendMessage(conversationId: String, text: String): String =
-        authed("POST", "/conversations/$conversationId/messages", JSONObject().put("text", text)).getString("job_id")
+        json("POST", "/conversations/$conversationId/messages", JSONObject().put("text", text)).getString("job_id")
+
+    suspend fun regenerate(conversationId: String): String =
+        json("POST", "/conversations/$conversationId/regenerate", JSONObject()).getString("job_id")
 
     /** Long-poll: the server holds the request up to ~20s until there is something new. */
     suspend fun poll(jobId: String, since: Int): PollResult {
-        val j = authed("GET", "/jobs/$jobId?since=$since", readTimeoutMs = 35000)
+        val j = json("GET", "/jobs/$jobId?since=$since", readTimeoutMs = 35000)
+        val (a, r) = memLists(j.optJSONObject("mem"))
         return PollResult(
             status = j.getString("status"),
             error = if (j.isNull("error")) null else j.getString("error"),
@@ -119,17 +159,63 @@ object Api {
             text = j.optString("text", ""),
             delta = j.optString("delta", ""),
             next = j.optInt("next", since),
+            final = if (j.has("final") && !j.isNull("final")) j.getString("final") else null,
+            memAdded = a,
+            memRemoved = r,
+            messageId = j.optLong("message_id", 0L),
         )
     }
 
-    suspend fun cancel(jobId: String) {
-        authed("POST", "/jobs/$jobId/cancel", JSONObject())
+    suspend fun cancel(jobId: String) { json("POST", "/jobs/$jobId/cancel", JSONObject()) }
+
+    suspend fun react(messageId: Long, v: Int) { json("POST", "/messages/$messageId/react", JSONObject().put("v", v)) }
+
+    // ───── voice ─────
+    suspend fun voiceStatus(): VoiceStatus {
+        val j = json("GET", "/voice/status")
+        val t = j.optJSONObject("tts")
+        val s = j.optJSONObject("stt")
+        return VoiceStatus(
+            ttsOn = t?.optBoolean("enabled") == true,
+            ttsLeft = t?.optInt("left") ?: 0,
+            ttsLimit = t?.optInt("limit") ?: 0,
+            sttOn = s?.optBoolean("enabled") == true,
+        )
     }
+
+    /** Candy's reply read out loud, as mp3 bytes. The server keeps what it already voiced. */
+    suspend fun voiceBytes(messageId: Long): ByteArray = authed {
+        val r = raw("GET", "/messages/$messageId/voice", readTimeoutMs = 45000)
+        if (r.status !in 200..299) parse(r)
+        r.bytes
+    }
+
+    suspend fun transcribe(audioBase64: String): String =
+        json("POST", "/voice/transcribe", JSONObject().put("audio", audioBase64), readTimeoutMs = 45000).optString("text", "")
+
+    // ───── memory ─────
+    suspend fun memory(): MemState {
+        val j = json("GET", "/memory")
+        val a = j.optJSONArray("items")
+        val items = ArrayList<MemItem>()
+        if (a != null) for (i in 0 until a.length()) a.optJSONObject(i)?.let { items.add(MemItem(it.optLong("id"), it.optString("text"))) }
+        return MemState(items, j.optBoolean("on", true), j.optInt("max", 50))
+    }
+
+    suspend fun memoryAdd(text: String) { json("POST", "/memory/add", JSONObject().put("text", text)) }
+    suspend fun memoryDelete(id: Long) { json("POST", "/memory/delete", JSONObject().put("id", id)) }
+    suspend fun memoryClear() { json("POST", "/memory/delete", JSONObject().put("all", true)) }
+    suspend fun memoryToggle(on: Boolean) { json("POST", "/memory/toggle", JSONObject().put("on", on)) }
 }
 
 fun errorMessage(ctx: Context, e: Throwable): String = when {
     e is ApiException && e.code == "daily_limit" -> ctx.getString(R.string.err_daily_limit)
     e is ApiException && e.code == "reply_in_progress" -> ctx.getString(R.string.err_busy)
+    e is ApiException && e.code == "voice_limit" -> ctx.getString(R.string.ai_voice_limit)
+    e is ApiException && e.code == "voice_empty" -> ctx.getString(R.string.ai_voice_empty)
+    e is ApiException && e.code == "stt_empty" -> ctx.getString(R.string.ai_stt_empty)
+    e is ApiException && e.code == "not_found" -> ctx.getString(R.string.ai_voice_gone)
+    e is ApiException && (e.code == "voice_unavailable" || e.code == "stt_unavailable") -> ctx.getString(R.string.ai_voice_fail)
     e is ApiException -> ctx.getString(R.string.err_generic)
     e is IOException -> ctx.getString(R.string.err_network)
     else -> ctx.getString(R.string.err_generic)
