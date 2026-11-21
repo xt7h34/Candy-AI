@@ -231,94 +231,13 @@ private fun saveShot(ctx: Context, bmp: Bitmap) {
     }.start()
 }
 
-/** The conversation inside the sheet: sends a message (with the circled picture), follows the reply while it streams. */
-private class CtsChat(private val ctx: Context, private val scope: CoroutineScope) {
-    var convId by mutableStateOf<String?>(null)
-    val turns = mutableStateListOf<AiMsg>()
-    var reply by mutableStateOf("")
-    var sending by mutableStateOf(false)
-    var error by mutableStateOf("")
-    private var jobId: String? = null
-    private var drawn: List<AttRef> = emptyList()
-
-    private suspend fun follow(job: String) {
-        jobId = job
-        var since = 0
-        var fails = 0
-        while (true) {
-            val p = try {
-                Api.poll(job, since)
-            } catch (e: IOException) {
-                fails++
-                if (fails > 5) throw e
-                delay(1500)
-                continue
-            }
-            fails = 0
-            val piece = if (p.full) p.text else p.delta
-            if (piece.isNotEmpty()) reply = if (p.full) piece else reply + piece
-            since = p.next
-            if (p.status != "running") {
-                val fin = p.final
-                if (!fin.isNullOrBlank()) reply = fin
-                if (p.atts.isNotEmpty()) drawn = p.atts
-                if (p.status == "error") error = ctx.getString(R.string.err_reply)
-                break
-            }
-        }
-    }
-
-    fun ask(text: String, files: List<Pending> = emptyList()) {
-        if (sending || (text.isBlank() && files.isEmpty())) return
-        sending = true
-        error = ""
-        drawn = emptyList()
-        turns.add(
-            AiMsg(
-                -System.nanoTime(), "user", text, System.currentTimeMillis(),
-                atts = files.mapIndexed { i, p -> AttRef(-(i + 1).toLong(), p.kind, p.name, p.thumb) },
-            ),
-        )
-        reply = ""
-        scope.launch {
-            var sent = false
-            try {
-                val cid = convId ?: Api.createConversation().also {
-                    convId = it
-                    // it shows up in the normal list of conversations, named after where it came from
-                    try { Api.renameConversation(it, ctx.getString(R.string.cts_conv_title)) } catch (_: Exception) { }
-                }
-                val job = Api.sendMessage(cid, text, files)
-                sent = true
-                follow(job)
-                if (reply.isNotEmpty() || drawn.isNotEmpty()) {
-                    turns.add(AiMsg(-System.nanoTime(), "assistant", reply, System.currentTimeMillis(), atts = drawn))
-                }
-                reply = ""
-            } catch (e: Exception) {
-                error = errorMessage(ctx, e)
-                if (!sent && turns.isNotEmpty()) turns.removeAt(turns.lastIndex)
-            } finally {
-                sending = false
-                jobId = null
-            }
-        }
-    }
-
-    fun stop() {
-        val j = jobId ?: return
-        scope.launch { try { Api.cancel(j) } catch (_: Exception) { } }
-    }
-}
-
 @Composable
 fun CtsScreen(shot: Bitmap, onClose: () -> Unit, onOpenFull: (String?) -> Unit) {
     val ctx = LocalContext.current
     val c = LocalCandy.current
-    val cs = MaterialTheme.colorScheme
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
-    val chat = remember { CtsChat(ctx, scope) }
+    val chat = remember { SeeChat(ctx, scope, speakReplies = false, convTitle = ctx.getString(R.string.cts_conv_title)) }
     val img = remember(shot) { shot.asImageBitmap() }
 
     val stroke = remember { ArrayList<Offset>() }                   // what the finger is drawing (not observable: redraws are driven by [tick])
@@ -329,16 +248,8 @@ fun CtsScreen(shot: Bitmap, onClose: () -> Unit, onOpenFull: (String?) -> Unit) 
     var box by remember { mutableStateOf(IntSize.Zero) }
     var region by remember { mutableStateOf<Pending?>(null) }       // the circled part, packed to send
     var attached by remember { mutableStateOf(false) }              // is the current picture already in the conversation?
-    var input by remember { mutableStateOf("") }
-    var listening by remember { mutableStateOf(false) }
-    var recording by remember { mutableStateOf(false) }
-    val recorder = remember { VoiceRecorder(ctx) }
-    val scroll = rememberScrollState()
+    val hasChat = chat.hasChat
 
-    val hasChat = chat.turns.isNotEmpty() || chat.sending
-    val sheetH = remember { Animatable(0f) }
-
-    // ───── asking ─────
     fun fail() { chat.error = ctx.getString(R.string.attach_fail) }
 
     /** Sends text. The picture (the circle, or the whole screen if nothing was circled) goes along only the first time. */
@@ -348,7 +259,6 @@ fun CtsScreen(shot: Bitmap, onClose: () -> Unit, onOpenFull: (String?) -> Unit) 
             val files = if (attached) emptyList() else listOfNotNull(region ?: AttachKit.fromBitmap(shot, "screen.jpg"))
             if (!attached && files.isEmpty()) { fail(); return@launch }
             attached = true
-            input = ""
             chat.ask(text, files)
         }
     }
@@ -383,62 +293,12 @@ fun CtsScreen(shot: Bitmap, onClose: () -> Unit, onOpenFull: (String?) -> Unit) 
             if (packed == null) { fail(); return@launch }
             region = packed
             attached = true
+            // like Google: the answer starts as soon as the circle is closed
             chat.ask(ctx.getString(R.string.cts_default_prompt), listOf(packed))
         }
     }
 
-    // ───── voice, same as the Edge panel ─────
-    fun finishRecording() {
-        val done = recorder.finish()
-        recording = false
-        if (done == null || done.second < 800L) {
-            done?.first?.delete()
-            chat.error = ctx.getString(R.string.voice_too_short)
-            return
-        }
-        scope.launch {
-            listening = true
-            chat.error = ""
-            try {
-                val bytes = withContext(Dispatchers.IO) { done.first.readBytes() }
-                done.first.delete()
-                val t = Api.transcribe(Base64.encodeToString(bytes, Base64.NO_WRAP)).trim()
-                listening = false
-                if (t.isEmpty()) chat.error = ctx.getString(R.string.ai_stt_empty) else askWith(t)
-            } catch (e: Exception) {
-                chat.error = errorMessage(ctx, e)
-            } finally {
-                listening = false
-            }
-        }
-    }
-
-    fun startRecording() {
-        if (recorder.start()) { recording = true; chat.error = "" } else chat.error = ctx.getString(R.string.voice_record_failed)
-    }
-
-    val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) startRecording() else chat.error = ctx.getString(R.string.voice_no_permission)
-    }
-
-    fun onMic() {
-        if (recording) finishRecording()
-        else if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) startRecording()
-        else micPermission.launch(Manifest.permission.RECORD_AUDIO)
-    }
-
-    DisposableEffect(Unit) { onDispose { recorder.cancel() } }
-    LaunchedEffect(chat.reply.length, chat.turns.size) { scroll.scrollTo(scroll.maxValue) }
-    // the sheet opens to a comfortable height the moment there is something to read
-    LaunchedEffect(hasChat) {
-        if (hasChat && box.height > 0 && sheetH.value == 0f) {
-            sheetH.snapTo(box.height * 0.26f)
-            sheetH.animateTo(box.height * 0.42f, spring(Spring.DampingRatioLowBouncy, Spring.StiffnessMediumLow))
-        }
-    }
-    BackHandler {
-        if (sheetH.value > box.height * 0.5f) scope.launch { sheetH.animateTo(box.height * 0.42f) } else onClose()
-    }
+    BackHandler { onClose() }
 
     // a soft glow around the screen when it freezes, then it fades
     val intro = remember { Animatable(0f) }
@@ -543,135 +403,17 @@ fun CtsScreen(shot: Bitmap, onClose: () -> Unit, onOpenFull: (String?) -> Unit) 
             }
         }
 
-        // the sheet: drag the handle to make it taller or shorter
-        val dragState = rememberDraggableState { d ->
-            scope.launch { sheetH.snapTo((sheetH.value - d).coerceIn(box.height * 0.22f, box.height * 0.92f)) }
-        }
-        val interactionNone = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-        Column(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                .layout { measurable, constraints ->
-                    // dragging changes the height every frame: read it here, in layout, so nothing recomposes
-                    if (!hasChat) {
-                        val p = measurable.measure(constraints)
-                        layout(p.width, p.height) { p.place(0, 0) }
-                    } else {
-                        val want = if (sheetH.value > 0f) sheetH.value else constraints.maxHeight * 0.26f
-                        val h = want.toInt().coerceIn(0, constraints.maxHeight)
-                        val p = measurable.measure(constraints.copy(minHeight = h, maxHeight = h))
-                        layout(p.width, p.height) { p.place(0, 0) }
-                    }
-                }
-                .clickable(interactionSource = interactionNone, indication = null) { }   // touches on the sheet never reach the drawing surface
-                .background(cs.background, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-                .navigationBarsPadding().imePadding()
-                .padding(horizontal = 14.dp).padding(bottom = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            // handle
-            Box(
-                Modifier.fillMaxWidth().height(28.dp).draggable(
-                    state = dragState,
-                    orientation = Orientation.Vertical,
-                    onDragStopped = { v ->
-                        val h = box.height.toFloat()
-                        val stops = listOf(0.28f * h, 0.5f * h, 0.92f * h)
-                        val projected = sheetH.value - v * 0.15f
-                        val target = stops.minByOrNull { abs(it - projected) } ?: stops[1]
-                        sheetH.animateTo(target, spring(Spring.DampingRatioLowBouncy, Spring.StiffnessMediumLow))
-                    },
-                ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(Modifier.width(40.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(cs.onSurfaceVariant.copy(alpha = 0.4f)))
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                AiAvatar(30.dp)
-                Text(
-                    stringResource(R.string.ai_name),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = cs.onBackground,
-                    modifier = Modifier.weight(1f).padding(horizontal = 10.dp),
-                )
-                if (chat.convId != null) {
-                    TextButton(onClick = { onOpenFull(chat.convId) }) { Text(stringResource(R.string.cts_open_chat), color = cs.primary) }
-                }
-            }
-
-            if (hasChat) {
-                Column(Modifier.weight(1f).verticalScroll(scroll), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    for (t in chat.turns) AiBubble(t)
-                    if (chat.reply.isNotEmpty()) {
-                        AiBubble(AiMsg(-2L, "assistant", chat.reply, System.currentTimeMillis()))
-                    } else if (chat.sending || listening) {
-                        AiTypingBubble(stringResource(if (listening) R.string.ai_listening else R.string.ai_thinking))
-                    }
-                }
-            }
-            if (recording) Muted(stringResource(R.string.edge_recording))
-            if (chat.error.isNotBlank()) ErrorText(chat.error)
-
-            // quick actions on what is selected (or the whole screen)
-            if (!chat.sending) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CtsChip(stringResource(R.string.cts_explain)) { askWith(ctx.getString(R.string.cts_p_explain)) }
-                    CtsChip(stringResource(R.string.cts_translate)) { askWith(ctx.getString(R.string.cts_p_translate)) }
-                    CtsChip(stringResource(R.string.cts_summarize)) { askWith(ctx.getString(R.string.cts_p_summarize)) }
-                }
-            }
-
-            val buttonFirst = (Store.sendSide == "left") != (LocalLayoutDirection.current == LayoutDirection.Rtl)
-            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                val inputBox: @Composable RowScope.() -> Unit = {
-                    Surface(shape = MaterialTheme.shapes.extraLarge, color = cs.surfaceContainerHigh, modifier = Modifier.weight(1f)) {
-                        Box(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                            if (input.isEmpty()) Text(stringResource(R.string.cts_input_hint), color = cs.onSurfaceVariant)
-                            BasicTextField(
-                                value = input,
-                                onValueChange = { input = it.take(1500) },
-                                textStyle = LocalTextStyle.current.copy(color = cs.onSurface),
-                                cursorBrush = SolidColor(cs.primary),
-                                maxLines = 4,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-                    }
-                }
-                val actionButton: @Composable () -> Unit = {
-                    val showMic = input.isBlank() && !chat.sending
-                    val active = chat.sending || recording || (!listening && (showMic || input.isNotBlank()))
-                    Surface(
-                        shape = CircleShape,
-                        color = if (active) cs.primary else cs.surfaceContainerHigh,
-                        modifier = Modifier.size(48.dp).clip(CircleShape).clickable(enabled = active) {
-                            if (chat.sending) chat.stop() else if (recording || showMic) onMic() else askWith(input.trim())
-                        },
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            val tint = if (active) cs.onPrimary else cs.onSurfaceVariant
-                            when {
-                                chat.sending || recording -> Icon(Icons.Rounded.Stop, stringResource(R.string.stop), tint = tint)
-                                showMic -> Icon(painterResource(R.drawable.ic_wave), null, tint = tint, modifier = Modifier.size(24.dp))
-                                else -> Icon(Icons.AutoMirrored.Rounded.Send, stringResource(R.string.send), tint = tint)
-                            }
-                        }
-                    }
-                }
-                if (buttonFirst) { actionButton(); inputBox() } else { inputBox(); actionButton() }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CtsChip(label: String, onClick: () -> Unit) {
-    val cs = MaterialTheme.colorScheme
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = cs.surfaceContainerHigh,
-        modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onClick),
-    ) {
-        Text(label, color = cs.onSurface, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
+        // the Candy See capsule: typing or "Ask anything" sends the whole screen (or the circle) and waits for the question
+        SeeCapsule(
+            chat = chat,
+            hint = stringResource(R.string.see_ask_anything),
+            onSubmit = { askWith(it) },
+            onTranslate = { t ->
+                if (t.isBlank()) askWith(ctx.getString(R.string.cts_p_translate))
+                else askWith(ctx.getString(R.string.see_translate_text) + "\n" + t)
+            },
+            onOpenFull = onOpenFull,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
     }
 }

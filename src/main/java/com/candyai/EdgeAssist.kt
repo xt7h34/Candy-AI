@@ -47,32 +47,52 @@ class EdgeSessionService : VoiceInteractionSessionService() {
 }
 
 /**
- * The assistant gesture (long-press home / power, whichever the phone is set to). With "use screenshot" on in the phone's assistant settings,
- * Android hands over a screenshot: Candy shows it frozen so you can circle something (Circle to Search). Without a screenshot, or with
- * Circle to Search switched off in Candy's settings, the normal ask panel opens.
+ * The assistant gesture. Candy See has two faces:
+ *  - Circle to Search (home long-press): the screenshot Android hands over is shown frozen, you circle or ask.
+ *  - the voice panel (power long-press): opens listening over the live screen; the screenshot is kept only for the optional "attach the screen" button.
+ * Which one opens depends on how the assistant was invoked. Android passes that in [onShow]'s args (the key is internal, so it is also
+ * written to Settings > Candy See as a diagnostic line); when it is not recognised, Settings decides.
  */
 class EdgeSession(context: Context) : VoiceInteractionSession(context) {
     private val handler = Handler(Looper.getMainLooper())
     private var opened = false
-    private val noScreenshot = Runnable { openPanel() }
+    private var voiceMode = false
+    private val noScreenshot = Runnable { open(voice = false) }
 
     override fun onShow(args: Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
         opened = false
         Store.init(context.applicationContext)
-        if (!Store.ctsOn || showFlags and SHOW_WITH_SCREENSHOT == 0) {
-            openPanel()
+        val withShot = showFlags and SHOW_WITH_SCREENSHOT != 0
+        val inv = args?.getInt("invocation_type", -1) ?: -1
+        val keys = args?.keySet()?.joinToString(",") ?: "-"
+        // 6 = power long-press, 5 = home long-press, 1 = corner swipe on stock Android; other phones may differ
+        voiceMode = when {
+            !Store.ctsOn || !withShot -> true
+            inv == 6 -> true
+            inv == 5 || inv == 1 -> false
+            else -> Store.seeUnknown == "voice"
+        }
+        Store.lastAssist = "invocation_type=$inv, flags=$showFlags, screenshot=${if (withShot) "yes" else "no"}, keys=[$keys] → ${if (voiceMode) "voice" else "cts"}"
+        SeeHolder.shot = null
+        SeeHolder.hasScreen = withShot
+        if (voiceMode) {
+            open(voice = true)
         } else {
-            // the screenshot arrives a moment after onShow; if it never does, fall back to the panel
+            // the screenshot arrives a moment after onShow; if it never does, fall back to the typing panel
             handler.postDelayed(noScreenshot, 1500)
         }
     }
 
     override fun onHandleScreenshot(screenshot: Bitmap?) {
         handler.removeCallbacks(noScreenshot)
+        if (voiceMode) {
+            SeeHolder.shot = screenshot   // kept in memory for the "attach the screen" button
+            return
+        }
         if (opened) return
-        if (screenshot == null || !Store.ctsOn) {
-            openPanel()
+        if (screenshot == null) {
+            open(voice = false)
         } else {
             opened = true
             CtsHolder.shot = screenshot
@@ -85,10 +105,10 @@ class EdgeSession(context: Context) : VoiceInteractionSession(context) {
         super.onHide()
     }
 
-    private fun openPanel() {
+    private fun open(voice: Boolean) {
         if (opened) return
         opened = true
-        startAssistantActivity(Intent(context, EdgeActivity::class.java))
+        startAssistantActivity(Intent(context, EdgeActivity::class.java).putExtra("voice", voice))
     }
 }
 

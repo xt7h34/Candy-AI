@@ -91,6 +91,7 @@ fun SettingsScreen(
     var overlayOn by remember { mutableStateOf(Store.overlayOn && android.provider.Settings.canDrawOverlays(ctx)) }
     var ctsOn by remember { mutableStateOf(Store.ctsOn) }
     var ctsSave by remember { mutableStateOf(Store.ctsSave) }
+    var seeUnknown by remember { mutableStateOf(Store.seeUnknown) }
 
     // "try with a picture": opens the Circle to Search screen on a picture from the gallery instead of a real screenshot
     val ctsPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
@@ -207,8 +208,22 @@ fun SettingsScreen(
                     }
                     Text(stringResource(R.string.cts_keep_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                     Text(stringResource(R.string.cts_setup_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                    // Candy See: what opens when Candy cannot tell home from power
+                    Text(stringResource(R.string.see_unknown_title), color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        LangChip(stringResource(R.string.see_unknown_cts), seeUnknown != "voice", Modifier.weight(1f)) { seeUnknown = "cts"; Store.seeUnknown = "cts" }
+                        LangChip(stringResource(R.string.see_unknown_voice), seeUnknown == "voice", Modifier.weight(1f)) { seeUnknown = "voice"; Store.seeUnknown = "voice" }
+                    }
+                    Text(stringResource(R.string.see_unknown_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                    Text(
+                        stringResource(R.string.see_last_title) + "\n" + Store.lastAssist.ifBlank { stringResource(R.string.see_last_none) },
+                        color = c.subtext, fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp),
+                    )
                     Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         TextButton(onClick = { openAssistantSettings() }) { Text(stringResource(R.string.cts_set_assistant), color = c.userBubble) }
+                        TextButton(onClick = { ctx.startActivity(Intent(ctx, EdgeActivity::class.java).putExtra("voice", true)) }) {
+                            Text(stringResource(R.string.see_try_voice), color = c.userBubble)
+                        }
                         TextButton(onClick = { ctsPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
                             Text(stringResource(R.string.cts_try), color = c.userBubble)
                         }

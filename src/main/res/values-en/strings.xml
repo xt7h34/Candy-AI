@@ -88,4 +88,18 @@
     <string name="cts_p_translate">Translate any text shown in this picture: if it is English translate it to Arabic, otherwise translate it to English.</string>
     <string name="cts_p_summarize">Summarize what is in this picture in a few lines.</string>
     <string name="cts_conv_title">From the screen</string>
+    <string name="see_ask_anything">Ask anything</string>
+    <string name="see_voice_hint">Speak or type</string>
+    <string name="see_attach_screen">Attach the screen</string>
+    <string name="see_screen_prompt">What is on this screen?</string>
+    <string name="see_no_screen">No screenshot is available this time</string>
+    <string name="see_translate_text">Translate this text: if it is English translate it to Arabic, otherwise translate it to English.</string>
+    <string name="see_translate_last">Translate your last answer to the other language (Arabic ↔ English).</string>
+    <string name="see_unknown_title">When Candy cannot tell home from power</string>
+    <string name="see_unknown_cts">Open Circle to Search</string>
+    <string name="see_unknown_voice">Open voice</string>
+    <string name="see_unknown_hint">Power opens voice and home opens Circle to Search when your phone tells Candy how it was invoked. If it does not, this choice is used.</string>
+    <string name="see_last_title">Last time Candy was opened as the assistant:</string>
+    <string name="see_last_none">Not opened yet</string>
+    <string name="see_try_voice">Try voice</string>
 </resources>

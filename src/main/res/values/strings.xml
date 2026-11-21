@@ -90,4 +90,18 @@
     <string name="cts_p_translate">ترجم أي كلام ظاهر في الصورة دي: لو عربي ترجمه للإنجليزي، ولو بلغة تانية ترجمه للعربي.</string>
     <string name="cts_p_summarize">لخّصلي اللي في الصورة دي في كام سطر.</string>
     <string name="cts_conv_title">من الشاشة</string>
+    <string name="see_ask_anything">اسأل أي حاجة</string>
+    <string name="see_voice_hint">اتكلم أو اكتب</string>
+    <string name="see_attach_screen">أرفق الشاشة</string>
+    <string name="see_screen_prompt">إيه اللي على الشاشة دي؟</string>
+    <string name="see_no_screen">مفيش لقطة شاشة متاحة المرة دي</string>
+    <string name="see_translate_text">ترجم النص ده: لو عربي ترجمه للإنجليزي، ولو بلغة تانية ترجمه للعربي.</string>
+    <string name="see_translate_last">ترجم ردك الأخير للغة التانية (عربي ↔ إنجليزي).</string>
+    <string name="see_unknown_title">لما مش بعرف الضغطة هوم ولا باور</string>
+    <string name="see_unknown_cts">يفتح Circle to Search</string>
+    <string name="see_unknown_voice">يفتح الصوت</string>
+    <string name="see_unknown_hint">الباور بيفتح الصوت والهوم بيفتح Circle to Search لو الموبايل بيبلّغ كاندي بنوع الضغطة. لو ما بلّغش، الاختيار ده هو اللي بيتنفذ.</string>
+    <string name="see_last_title">آخر مرة اتفتحت فيها كاندي كمساعد:</string>
+    <string name="see_last_none">لسه ما اتفتحتش</string>
+    <string name="see_try_voice">جرّب الصوت</string>
 </resources>

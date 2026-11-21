@@ -59,6 +59,16 @@ object Store {
         get() = sp.getBoolean("cts_save", false)
         set(v) { sp.edit().putBoolean("cts_save", v).apply() }
 
+    /** What an assistant gesture that Candy cannot tell apart (home vs power) opens: "cts" (default) or "voice". */
+    var seeUnknown: String
+        get() = sp.getString("see_unknown", "cts").let { if (it == "voice") "voice" else "cts" }
+        set(v) { sp.edit().putString("see_unknown", if (v == "voice") "voice" else "cts").apply() }
+
+    /** Diagnostic: how the assistant was invoked the last time (shown in Settings). */
+    var lastAssist: String
+        get() = sp.getString("last_assist", "") ?: ""
+        set(v) { sp.edit().putString("last_assist", v).apply() }
+
     /** "system" (follow the phone, default), "light" or "dark". */
     var themeMode: String
         get() = sp.getString("theme", "system").let { if (it == "light" || it == "dark") it else "system" }
