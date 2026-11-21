@@ -34,6 +34,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -465,7 +466,7 @@ private fun OverlayContent(hidden: Boolean, left: Boolean, animated: Boolean, ci
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         if (hidden) {
             // the tab: flat on the edge, or a round bubble when it is pulled away (it morphs between the two)
-            val spec = if (animated) spring<Dp>(dampingRatio = 0.7f, stiffness = 380f) else snap<Dp>()
+            val spec = if (animated) spring<Dp>(dampingRatio = 1f, stiffness = 500f)   // no overshoot: a corner radius below zero must never happen else snap<Dp>()
             val w by animateDpAsState(if (circle) 48.dp else TAB_W, spec, label = "w")
             val h by animateDpAsState(if (circle) 48.dp else TAB_H, spec, label = "h")
             val edgeR by animateDpAsState(if (circle) 24.dp else 0.dp, spec, label = "er")
@@ -477,10 +478,10 @@ private fun OverlayContent(hidden: Boolean, left: Boolean, animated: Boolean, ci
             ) {
                 Box(
                     Modifier
-                        .size(w, h)
+                        .size(w.coerceAtLeast(1.dp), h.coerceAtLeast(1.dp))
                         .clip(
-                            if (left) RoundedCornerShape(topStart = edgeR, bottomStart = edgeR, topEnd = innerR, bottomEnd = innerR)
-                            else RoundedCornerShape(topStart = innerR, bottomStart = innerR, topEnd = edgeR, bottomEnd = edgeR),
+                            if (left) RoundedCornerShape(topStart = edgeR.coerceAtLeast(0.dp), bottomStart = edgeR.coerceAtLeast(0.dp), topEnd = innerR.coerceAtLeast(0.dp), bottomEnd = innerR.coerceAtLeast(0.dp))
+                            else RoundedCornerShape(topStart = innerR.coerceAtLeast(0.dp), bottomStart = innerR.coerceAtLeast(0.dp), topEnd = edgeR.coerceAtLeast(0.dp), bottomEnd = edgeR.coerceAtLeast(0.dp)),
                         )
                         .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.92f)),
                     contentAlignment = Alignment.Center,
@@ -489,7 +490,7 @@ private fun OverlayContent(hidden: Boolean, left: Boolean, animated: Boolean, ci
                         painter = painterResource(R.drawable.candy_ai_avatar),
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.size(face).clip(CircleShape),
+                        modifier = Modifier.size(face.coerceAtLeast(1.dp)).clip(CircleShape),
                     )
                 }
             }
