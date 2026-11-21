@@ -30,6 +30,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.unit.Dp
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -107,6 +111,15 @@ private object OverlayPrefs {
     fun left(ctx: Context): Boolean = p(ctx).getBoolean("left", false)
     fun y(ctx: Context): Float = p(ctx).getFloat("y", 0.55f)
     fun hidden(ctx: Context): Boolean = p(ctx).getBoolean("hidden", false)
+    /** The tab pulled away from the edge: it floats as a circle (position as a fraction of the free screen area). */
+    fun floating(ctx: Context): Boolean = p(ctx).getBoolean("floating", false)
+    /** She came out of a floating circle, so tucking her away again puts the circle back where it was. */
+    fun was(ctx: Context): Boolean = p(ctx).getBoolean("was_floating", false)
+    fun fx(ctx: Context): Float = p(ctx).getFloat("fx", 0.5f)
+    fun fy(ctx: Context): Float = p(ctx).getFloat("fy", 0.5f)
+    fun saveFloat(ctx: Context, floating: Boolean, was: Boolean, fx: Float, fy: Float) {
+        p(ctx).edit().putBoolean("floating", floating).putBoolean("was_floating", was).putFloat("fx", fx).putFloat("fy", fy).apply()
+    }
     fun save(ctx: Context, left: Boolean, y: Float, hidden: Boolean) {
         p(ctx).edit().putBoolean("left", left).putFloat("y", y).putBoolean("hidden", hidden).apply()
     }
@@ -116,6 +129,8 @@ private val PEEK_W = 104.dp
 private val PEEK_H = 144.dp
 private val TAB_W = 28.dp
 private val TAB_H = 56.dp
+private val TAB_WIN_W = 52.dp   // the tab's window is a little wider than the tab so it can grow into a circle
+private const val FLOAT_DIST_DP = 36f   // pulled this far from the edge, the tab becomes a floating circle
 
 class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, ViewModelStoreOwner {
     // a Compose view needs these three owners, and a service has none of them, so it plays all three
@@ -134,6 +149,11 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
     private var edgeLeft by mutableStateOf(false)
     private var hidden by mutableStateOf(false)
     private var yFrac = 0.55f
+    private var floating = false              // hidden, and sitting away from the edge as a circle
+    private var wasFloating = false
+    private var fx = 0.5f
+    private var fy = 0.5f
+    private var floatLook by mutableStateOf(false)   // what the tab looks like right now (circle or edge tab), also while dragging
 
     private var downX = 0f
     private var downY = 0f
@@ -158,6 +178,11 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
         edgeLeft = OverlayPrefs.left(this)
         yFrac = OverlayPrefs.y(this)
         hidden = OverlayPrefs.hidden(this)
+        floating = hidden && OverlayPrefs.floating(this)
+        wasFloating = OverlayPrefs.was(this)
+        fx = OverlayPrefs.fx(this)
+        fy = OverlayPrefs.fy(this)
+        floatLook = floating
         CandyOverlay.listener = { syncVisibility() }
     }
 
@@ -252,7 +277,7 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
         val animated = Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
         val frame = FrameLayout(this)
         val compose = ComposeView(this)
-        compose.setContent { CandyTheme { OverlayContent(hidden, edgeLeft, animated) } }
+        compose.setContent { CandyTheme { OverlayContent(hidden, edgeLeft, animated, floatLook) } }
         frame.addView(compose)
         frame.setViewTreeLifecycleOwner(this)
         frame.setViewTreeSavedStateRegistryOwner(this)
@@ -273,14 +298,20 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
         val d = dm.density
         val peekH = (PEEK_H.value * d).toInt()
         val tabH = (TAB_H.value * d).toInt()
-        val w = ((if (hidden) TAB_W else PEEK_W).value * d).toInt()
+        val w = ((if (hidden) TAB_WIN_W else PEEK_W).value * d).toInt()
         val h = if (hidden) tabH else peekH
         val yMax = (dm.heightPixels - peekH - (48 * d).toInt()).coerceAtLeast(1)
         val baseY = (yFrac * yMax).toInt().coerceIn(0, yMax)
         lp.width = w
         lp.height = h
-        lp.x = if (edgeLeft) 0 else dm.widthPixels - w
-        lp.y = if (hidden) baseY + (peekH - tabH) / 2 else baseY
+        if (hidden && floating) {
+            lp.x = (fx * (dm.widthPixels - w).coerceAtLeast(1)).toInt().coerceIn(0, (dm.widthPixels - w).coerceAtLeast(0))
+            lp.y = (fy * (dm.heightPixels - h).coerceAtLeast(1)).toInt().coerceIn(0, (dm.heightPixels - h).coerceAtLeast(0))
+        } else {
+            lp.x = if (edgeLeft) 0 else dm.widthPixels - w
+            lp.y = if (hidden) baseY + (peekH - tabH) / 2 else baseY
+        }
+        floatLook = hidden && floating
         if (update) root?.let { try { wm.updateViewLayout(it, lp) } catch (_: Exception) { } }
     }
 
@@ -305,8 +336,16 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
                     handler.removeCallbacks(longPress)
                 }
                 if (moved) {
-                    lp.x = (startX + dx).toInt()
-                    lp.y = (startY + dy).toInt().coerceIn(0, (resources.displayMetrics.heightPixels - lp.height).coerceAtLeast(0))
+                    val dm = resources.displayMetrics
+                    if (hidden) {
+                        // the tab follows the finger anywhere; far from the edge it turns into a circle, near the edge back into the tab
+                        lp.x = (startX + dx).toInt().coerceIn(0, (dm.widthPixels - lp.width).coerceAtLeast(0))
+                        val edgeDist = minOf(lp.x, dm.widthPixels - lp.width - lp.x)
+                        floatLook = edgeDist > FLOAT_DIST_DP * dm.density
+                    } else {
+                        lp.x = (startX + dx).toInt()
+                    }
+                    lp.y = (startY + dy).toInt().coerceIn(0, (dm.heightPixels - lp.height).coerceAtLeast(0))
                     try { wm.updateViewLayout(v, lp) } catch (_: Exception) { }
                 }
             }
@@ -316,8 +355,18 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
                     finishDrag()
                 } else if (!longFired) {
                     if (hidden) {
+                        // she comes out of the nearest edge, at the height of the tab or circle
+                        val dm = resources.displayMetrics
+                        val d = dm.density
+                        val peekH = (PEEK_H.value * d).toInt()
+                        val yMax = (dm.heightPixels - peekH - (48 * d).toInt()).coerceAtLeast(1)
+                        yFrac = (((lp.y + lp.height / 2f) - peekH / 2f) / yMax).coerceIn(0f, 1f)
+                        edgeLeft = lp.x + lp.width / 2 < dm.widthPixels / 2
+                        wasFloating = floating
                         hidden = false
+                        floating = false
                         OverlayPrefs.save(this, edgeLeft, yFrac, false)
+                        OverlayPrefs.saveFloat(this, false, wasFloating, fx, fy)
                         applyLayout()
                     } else {
                         openPanel()
@@ -338,6 +387,24 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
         val dm = resources.displayMetrics
         val d = dm.density
         val peekH = (PEEK_H.value * d).toInt()
+        if (hidden) {
+            if (floatLook) {
+                // let go away from the edge: she stays as a floating circle right here
+                floating = true
+                fx = (lp.x.toFloat() / (dm.widthPixels - lp.width).coerceAtLeast(1)).coerceIn(0f, 1f)
+                fy = (lp.y.toFloat() / (dm.heightPixels - lp.height).coerceAtLeast(1)).coerceIn(0f, 1f)
+            } else {
+                // let go near an edge: back to the tab on the nearest edge
+                floating = false
+                edgeLeft = lp.x + lp.width / 2 < dm.widthPixels / 2
+                val yMax0 = (dm.heightPixels - peekH - (48 * d).toInt()).coerceAtLeast(1)
+                yFrac = (((lp.y + lp.height / 2f) - peekH / 2f) / yMax0).coerceIn(0f, 1f)
+            }
+            OverlayPrefs.save(this, edgeLeft, yFrac, true)
+            OverlayPrefs.saveFloat(this, floating, wasFloating, fx, fy)
+            applyLayout()
+            return
+        }
         val w = lp.width
         val baseX = if (edgeLeft) 0 else dm.widthPixels - w
         val dx = lp.x - baseX
@@ -347,10 +414,12 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
         yFrac = ((centerY - peekH / 2f) / yMax).coerceIn(0f, 1f)
         if (!hidden && pushedIn) {
             hidden = true
+            floating = wasFloating   // she came out of a circle: the circle comes back where it was
         } else {
             edgeLeft = lp.x + w / 2 < dm.widthPixels / 2
         }
         OverlayPrefs.save(this, edgeLeft, yFrac, hidden)
+        OverlayPrefs.saveFloat(this, floating, wasFloating, fx, fy)
         applyLayout()
     }
 
@@ -391,27 +460,38 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
 }
 
 @Composable
-private fun OverlayContent(hidden: Boolean, left: Boolean, animated: Boolean) {
+private fun OverlayContent(hidden: Boolean, left: Boolean, animated: Boolean, circle: Boolean) {
     // her place and shape depend only on the edge she sits on, never on the app language
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         if (hidden) {
-            // only a small tab stays on the edge; tap it to bring her back
+            // the tab: flat on the edge, or a round bubble when it is pulled away (it morphs between the two)
+            val spec = if (animated) spring<Dp>(dampingRatio = 0.7f, stiffness = 380f) else snap<Dp>()
+            val w by animateDpAsState(if (circle) 48.dp else TAB_W, spec, label = "w")
+            val h by animateDpAsState(if (circle) 48.dp else TAB_H, spec, label = "h")
+            val edgeR by animateDpAsState(if (circle) 24.dp else 0.dp, spec, label = "er")
+            val innerR by animateDpAsState(if (circle) 24.dp else 16.dp, spec, label = "ir")
+            val face by animateDpAsState(if (circle) 38.dp else 22.dp, spec, label = "face")
             Box(
-                Modifier
-                    .size(TAB_W, TAB_H)
-                    .clip(
-                        if (left) RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
-                        else RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
-                    )
-                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.92f)),
-                contentAlignment = Alignment.Center,
+                Modifier.size(TAB_WIN_W, TAB_H),
+                contentAlignment = if (circle) Alignment.Center else if (left) Alignment.CenterStart else Alignment.CenterEnd,
             ) {
-                Image(
-                    painter = painterResource(R.drawable.candy_ai_avatar),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(22.dp).clip(CircleShape),
-                )
+                Box(
+                    Modifier
+                        .size(w, h)
+                        .clip(
+                            if (left) RoundedCornerShape(topStart = edgeR, bottomStart = edgeR, topEnd = innerR, bottomEnd = innerR)
+                            else RoundedCornerShape(topStart = innerR, bottomStart = innerR, topEnd = edgeR, bottomEnd = edgeR),
+                        )
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.92f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.candy_ai_avatar),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.size(face).clip(CircleShape),
+                    )
+                }
             }
         } else {
             CandyPeek(PEEK_W, PEEK_H, animated, 0, 0L, mirror = left)
