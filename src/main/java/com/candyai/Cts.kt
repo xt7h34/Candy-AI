@@ -18,7 +18,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -80,6 +79,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.layout
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -138,9 +142,10 @@ class CtsActivity : ComponentActivity() {
         enableEdgeToEdge()
         Store.init(applicationContext)
         ThemeMode.load()
-        // the real screenshot from the assistant, or a picture picked in Settings to try the screen out
-        val shot = CtsHolder.shot.also { CtsHolder.shot = null } ?: intent.data?.let { fitToScreen(it) }
-        if (shot == null) {
+        // the real screenshot from the assistant, or a picture picked in Settings to try the screen out (decoded off the main thread)
+        val real = CtsHolder.shot.also { CtsHolder.shot = null }
+        val uri = intent.data
+        if (real == null && uri == null) {
             startActivity(Intent(this, EdgeActivity::class.java))
             finish()
             return
@@ -148,17 +153,31 @@ class CtsActivity : ComponentActivity() {
         setContent {
             CandyTheme {
                 CompositionLocalProvider(LocalLayoutDirection provides Lang.direction(this@CtsActivity)) {
-                    CtsScreen(
-                        shot = shot,
-                        onClose = { closeWith(shot) },
-                        onOpenFull = { id ->
-                            val open = Intent(this@CtsActivity, MainActivity::class.java)
-                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                            if (id != null) open.putExtra("open_conv", id)
-                            startActivity(open)
-                            closeWith(shot)
-                        },
-                    )
+                    var shot by remember { mutableStateOf(real) }
+                    LaunchedEffect(Unit) {
+                        if (shot == null && uri != null) {
+                            val b = withContext(Dispatchers.IO) { fitToScreen(uri) }
+                            if (b == null) {
+                                startActivity(Intent(this@CtsActivity, EdgeActivity::class.java))
+                                finish()
+                            } else {
+                                shot = b
+                            }
+                        }
+                    }
+                    shot?.let { s ->
+                        CtsScreen(
+                            shot = s,
+                            onClose = { closeWith(s) },
+                            onOpenFull = { id ->
+                                val open = Intent(this@CtsActivity, MainActivity::class.java)
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                if (id != null) open.putExtra("open_conv", id)
+                                startActivity(open)
+                                closeWith(s)
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -176,7 +195,7 @@ class CtsActivity : ComponentActivity() {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
         var sample = 1
-        while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 3000) sample *= 2
+        while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 1800) sample *= 2
         val src = contentResolver.openInputStream(uri)?.use {
             BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
         }
@@ -302,7 +321,10 @@ fun CtsScreen(shot: Bitmap, onClose: () -> Unit, onOpenFull: (String?) -> Unit) 
     val chat = remember { CtsChat(ctx, scope) }
     val img = remember(shot) { shot.asImageBitmap() }
 
-    val stroke = remember { mutableStateListOf<Offset>() }          // what the finger is drawing
+    val stroke = remember { ArrayList<Offset>() }                   // what the finger is drawing (not observable: redraws are driven by [tick])
+    val livePath = remember { Path() }
+    var tick by remember { mutableIntStateOf(0) }
+    var drawingNow by remember { mutableStateOf(false) }
     var selection by remember { mutableStateOf<Path?>(null) }       // the closed shape once the finger is up
     var box by remember { mutableStateOf(IntSize.Zero) }
     var region by remember { mutableStateOf<Pending?>(null) }       // the circled part, packed to send
@@ -332,10 +354,10 @@ fun CtsScreen(shot: Bitmap, onClose: () -> Unit, onOpenFull: (String?) -> Unit) 
     }
 
     fun onCircled(pts: List<Offset>) {
-        if (pts.size < 8 || box.width == 0) { stroke.clear(); return }
+        if (pts.size < 8 || box.width == 0) { stroke.clear(); livePath.reset(); tick++; return }
         val minX = pts.minOf { it.x }; val maxX = pts.maxOf { it.x }
         val minY = pts.minOf { it.y }; val maxY = pts.maxOf { it.y }
-        if (maxX - minX < 40f && maxY - minY < 40f) { stroke.clear(); return }   // a tap, not a circle
+        if (maxX - minX < 40f && maxY - minY < 40f) { stroke.clear(); livePath.reset(); tick++; return }   // a tap, not a circle
         selection = Path().apply {
             moveTo(pts[0].x, pts[0].y)
             for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
@@ -438,34 +460,58 @@ fun CtsScreen(shot: Bitmap, onClose: () -> Unit, onOpenFull: (String?) -> Unit) 
     Box(Modifier.fillMaxSize().onSizeChanged { box = it }) {
         // the frozen screen
         Image(img, null, contentScale = ContentScale.FillBounds, modifier = Modifier.fillMaxSize())
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = scrim)))
+        Box(Modifier.fillMaxSize().graphicsLayer { alpha = scrim }.background(Color.Black))
 
         // drawing surface: the circle, with Candy's glow
+        // everything below is read while drawing, not while composing, so drawing does not recompose the screen
+        val outside = remember(selection, box) {
+            selection?.let { s ->
+                Path().apply {
+                    fillType = PathFillType.EvenOdd
+                    addRect(Rect(0f, 0f, box.width.toFloat(), box.height.toFloat()))
+                    addPath(s)
+                }
+            }
+        }
         Canvas(
             Modifier.fillMaxSize().pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
                     selection = null
                     stroke.clear()
+                    livePath.reset()
+                    livePath.moveTo(down.position.x, down.position.y)
                     stroke.add(down.position)
+                    drawingNow = true
+                    tick++
                     do {
                         val ev = awaitPointerEvent()
-                        for (ch in ev.changes) if (ch.pressed) { stroke.add(ch.position); ch.consume() }
+                        for (ch in ev.changes) {
+                            if (!ch.pressed) continue
+                            val last = stroke.last()
+                            val dx = ch.position.x - last.x
+                            val dy = ch.position.y - last.y
+                            if (dx * dx + dy * dy >= 16f) {   // skip points less than 4px apart
+                                stroke.add(ch.position)
+                                livePath.lineTo(ch.position.x, ch.position.y)
+                                tick++
+                            }
+                            ch.consume()
+                        }
                     } while (ev.changes.any { it.pressed })
+                    drawingNow = false
                     onCircled(stroke.toList())
                 }
             },
         ) {
+            tick   // read: a new point was added
             val sel = selection
-            if (sel != null) clipPath(sel, clipOp = ClipOp.Difference) { drawRect(Color.Black.copy(alpha = 0.55f)) }
-            val shape = sel ?: if (stroke.size > 1) Path().apply {
-                moveTo(stroke[0].x, stroke[0].y)
-                for (i in 1 until stroke.size) lineTo(stroke[i].x, stroke[i].y)
-            } else null
+            if (outside != null) drawPath(outside, Color.Black.copy(alpha = 0.55f))
+            val shape = sel ?: if (stroke.size > 1) livePath else null
             if (shape != null) {
                 val round = { w: Float -> Stroke(width = w, cap = StrokeCap.Round, join = StrokeJoin.Round) }
-                drawPath(shape, c.accent.copy(alpha = 0.22f * glow.value), style = round(20.dp.toPx()))
-                drawPath(shape, c.accent.copy(alpha = 0.55f * glow.value), style = round(10.dp.toPx()))
+                if (sel != null) drawPath(shape, c.accent.copy(alpha = 0.25f * glow.value), style = round(16.dp.toPx()))
+                drawPath(shape, c.accent.copy(alpha = 0.6f * glow.value), style = round(8.dp.toPx()))
                 drawPath(shape, Color.White, style = round(3.dp.toPx()))
             }
             if (intro.value > 0.01f) {
@@ -487,7 +533,7 @@ fun CtsScreen(shot: Bitmap, onClose: () -> Unit, onOpenFull: (String?) -> Unit) 
         }
 
         // hint, until the first circle
-        if (selection == null && stroke.isEmpty() && !hasChat) {
+        if (selection == null && !drawingNow && !hasChat) {
             Surface(
                 shape = RoundedCornerShape(50),
                 color = Color.Black.copy(alpha = 0.5f),
@@ -504,8 +550,18 @@ fun CtsScreen(shot: Bitmap, onClose: () -> Unit, onOpenFull: (String?) -> Unit) 
         val interactionNone = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
         Column(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                .animateContentSize()
-                .then(if (hasChat && sheetH.value > 0f) Modifier.height(with(density) { sheetH.value.toDp() }) else Modifier)
+                .layout { measurable, constraints ->
+                    // dragging changes the height every frame: read it here, in layout, so nothing recomposes
+                    if (!hasChat) {
+                        val p = measurable.measure(constraints)
+                        layout(p.width, p.height) { p.place(0, 0) }
+                    } else {
+                        val want = if (sheetH.value > 0f) sheetH.value else constraints.maxHeight * 0.26f
+                        val h = want.toInt().coerceIn(0, constraints.maxHeight)
+                        val p = measurable.measure(constraints.copy(minHeight = h, maxHeight = h))
+                        layout(p.width, p.height) { p.place(0, 0) }
+                    }
+                }
                 .clickable(interactionSource = interactionNone, indication = null) { }   // touches on the sheet never reach the drawing surface
                 .background(cs.background, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                 .navigationBarsPadding().imePadding()
@@ -543,7 +599,7 @@ fun CtsScreen(shot: Bitmap, onClose: () -> Unit, onOpenFull: (String?) -> Unit) 
                 }
             }
 
-            if (hasChat && sheetH.value > 0f) {
+            if (hasChat) {
                 Column(Modifier.weight(1f).verticalScroll(scroll), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     for (t in chat.turns) AiBubble(t)
                     if (chat.reply.isNotEmpty()) {
