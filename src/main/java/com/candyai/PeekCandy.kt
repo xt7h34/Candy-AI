@@ -39,8 +39,16 @@ private const val CLOSED_Y = 1322f
 private const val CLOSED_W = 400f
 private const val IRIS_L_X = 430f; private const val IRIS_L_Y = 1377f   // the whole iris of the eye on the left
 private const val IRIS_R_X = 605f; private const val IRIS_R_Y = 1345f
-private const val MAX_DX = 5f                        // how far the irises may travel, in picture pixels
-private const val MAX_DY = 2f
+// How far the irises may travel, in picture pixels. The eye on the right sits close to its corner, so it goes less far to the left.
+private const val L_LEFT = 9f
+private const val L_RIGHT = 9f
+private const val R_LEFT = 6f
+private const val R_RIGHT = 9f
+private const val UP = 2.5f
+private const val DOWN = 3.5f
+// Her gaze reaches the edge of that range before your finger reaches the edge of the screen
+private const val GAIN_X = 1.5f
+private const val GAIN_Y = 1.4f
 
 // The eyelid is a slanted line through both eyes (her head is tilted). It sweeps down from above the eyes (k = -36)
 // to below the closed lashes (k = +34); halfway (k = -1) the eyes are half closed.
@@ -86,13 +94,17 @@ fun PeekCandy(gaze: Offset?, modifier: Modifier = Modifier, eyeLine: Float = 0.3
     var wander by remember { mutableStateOf(Offset(0f, 0.2f)) }
     LaunchedEffect(gaze == null) {
         while (gaze == null) {
-            wander = Offset(Random.nextFloat() * 1.4f - 0.7f, Random.nextFloat() * 0.8f - 0.2f)
+            wander = Offset(Random.nextFloat() * 1.8f - 0.9f, Random.nextFloat() * 1.2f - 0.5f)
             delay(Random.nextLong(1800, 4200))
         }
     }
     val target = gaze ?: wander
-    val gx by animateFloatAsState(target.x.coerceIn(-1f, 1f) * MAX_DX, spring(Spring.DampingRatioNoBouncy, Spring.StiffnessLow), label = "gx")
-    val gy by animateFloatAsState(target.y.coerceIn(-1f, 1f) * MAX_DY, spring(Spring.DampingRatioNoBouncy, Spring.StiffnessLow), label = "gy")
+    val gx by animateFloatAsState((target.x * GAIN_X).coerceIn(-1f, 1f), spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMediumLow), label = "gx")
+    val gy by animateFloatAsState((target.y * GAIN_Y).coerceIn(-1f, 1f), spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMediumLow), label = "gy")
+    // -1..1 -> picture pixels, for each eye
+    val dxL = if (gx < 0f) gx * L_LEFT else gx * L_RIGHT
+    val dxR = if (gx < 0f) gx * R_LEFT else gx * R_RIGHT
+    val dy = if (gy < 0f) gy * UP else gy * DOWN
     val p = lid.value
 
     Canvas(modifier) {
@@ -103,10 +115,10 @@ fun PeekCandy(gaze: Offset?, modifier: Modifier = Modifier, eyeLine: Float = 0.3
         fun lineY(x: Float, k: Float) = LINE_Y0 + LINE_M * (x - LINE_X0) + k
         translate(0f, oy) {
             drawImage(base, dstSize = dst(base), filterQuality = FilterQuality.High)
-            translate((IRIS_L_X + gx) * s, (IRIS_L_Y + gy) * s) {
+            translate((IRIS_L_X + dxL) * s, (IRIS_L_Y + dy) * s) {
                 drawImage(irisL, dstSize = dst(irisL), filterQuality = FilterQuality.High)
             }
-            translate((IRIS_R_X + gx) * s, (IRIS_R_Y + gy) * s) {
+            translate((IRIS_R_X + dxR) * s, (IRIS_R_Y + dy) * s) {
                 drawImage(irisR, dstSize = dst(irisR), filterQuality = FilterQuality.High)
             }
 
