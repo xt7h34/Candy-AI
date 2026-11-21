@@ -60,7 +60,15 @@ class MainActivity : ComponentActivity() {
             CandyTheme(dark) {
                 // right-to-left for Arabic, left-to-right for English
                 CompositionLocalProvider(LocalLayoutDirection provides Lang.direction(this@MainActivity)) {
-                    CandyApp(pendingConv) { pendingConv = null }
+                    var loggedIn by remember { mutableStateOf(Store.loginDone) }
+                    if (loggedIn) {
+                        CandyApp(pendingConv) { pendingConv = null }
+                    } else {
+                        LoginScreen(onGuest = {
+                            Store.loginDone = true
+                            loggedIn = true
+                        })
+                    }
                 }
             }
         }

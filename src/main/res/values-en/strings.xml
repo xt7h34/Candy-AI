@@ -52,4 +52,10 @@
     <string name="theme_system">Auto</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
+    <string name="login_title">Welcome</string>
+    <string name="login_subtitle">Candy is waiting. Choose how to continue</string>
+    <string name="login_guest">Continue as guest</string>
+    <string name="login_google">Continue with Google</string>
+    <string name="login_candy">Candy account</string>
+    <string name="login_soon">Soon</string>
 </resources>

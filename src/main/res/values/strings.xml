@@ -54,4 +54,10 @@
     <string name="theme_system">تلقائي</string>
     <string name="theme_light">فاتح</string>
     <string name="theme_dark">غامق</string>
+    <string name="login_title">أهلًا بيك</string>
+    <string name="login_subtitle">كاندي مستنياك. اختار تكمّل إزاي</string>
+    <string name="login_guest">المتابعة كضيف</string>
+    <string name="login_google">المتابعة بحساب Google</string>
+    <string name="login_candy">حساب كاندي</string>
+    <string name="login_soon">قريبًا</string>
 </resources>

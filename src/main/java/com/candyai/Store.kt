@@ -44,6 +44,11 @@ object Store {
         get() = (sp.getString("send_side", null) ?: if (language == "en") "right" else "left").let { if (it == "left") "left" else "right" }
         set(v) { sp.edit().putString("send_side", if (v == "left") "left" else "right").apply() }
 
+    /** The login screen has been passed once (as a guest for now), so it is not shown again. */
+    var loginDone: Boolean
+        get() = sp.getBoolean("login_done", false)
+        set(v) { sp.edit().putBoolean("login_done", v).apply() }
+
     /** "system" (follow the phone, default), "light" or "dark". */
     var themeMode: String
         get() = sp.getString("theme", "system").let { if (it == "light" || it == "dark") it else "system" }
