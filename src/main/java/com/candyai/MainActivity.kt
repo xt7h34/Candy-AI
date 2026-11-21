@@ -60,6 +60,8 @@ class MainActivity : ComponentActivity() {
             CandyTheme(dark) {
                 // right-to-left for Arabic, left-to-right for English
                 CompositionLocalProvider(LocalLayoutDirection provides Lang.direction(this@MainActivity)) {
+                    // asks GitHub for a newer release (about once a day) and offers to install it
+                    UpdatePrompt()
                     var loggedIn by remember { mutableStateOf(Store.loginDone) }
                     if (loggedIn) {
                         CandyApp(pendingConv) { pendingConv = null }

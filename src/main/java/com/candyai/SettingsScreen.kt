@@ -242,6 +242,9 @@ fun SettingsScreen(
                 }
             }
 
+            // app updates
+            UpdateSection()
+
             // server
             SettingsCard {
                 OutlinedTextField(

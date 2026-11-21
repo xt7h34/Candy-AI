@@ -17,11 +17,13 @@ android {
         applicationId = "com.candyai"
         minSdk = 26
         targetSdk = 35
-        versionCode = 24
-        versionName = "0.24"
+        versionCode = 25
+        versionName = "0.25"
         // Address of the Candy server: one line in api-url.txt. It can also be changed inside the app.
         val apiUrl = File(rootDir, "api-url.txt").takeIf { it.exists() }
             ?.readLines()?.firstOrNull()?.trim().orEmpty().replace("\"", "")
+        // Repository the app checks for newer releases (the build can override it with -PupdateRepo=owner/name)
+        buildConfigField("String", "UPDATE_REPO", "\"${project.findProperty("updateRepo") ?: "xt7h34/Candy-AI"}\"")
         buildConfigField("String", "SERVER_URL", "\"$apiUrl\"")
         // Web application client ID (NOT the Android one): the ID token's audience, checked by the server
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"1049344857995-irthfor4kq2u8p6dp4ltq6afkbeqejfr.apps.googleusercontent.com\"")
