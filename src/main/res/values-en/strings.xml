@@ -58,4 +58,5 @@
     <string name="login_google">Continue with Google</string>
     <string name="login_candy">Candy account</string>
     <string name="login_soon">Soon</string>
+    <string name="login_google_fail">Couldn\'t sign you in with Google. Try again.</string>
 </resources>

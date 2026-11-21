@@ -49,7 +49,7 @@ import kotlinx.coroutines.delay
 
 /** The first screen: Candy peeking over her pillow, and three ways in. Only the guest way works for now. */
 @Composable
-fun LoginScreen(onGuest: () -> Unit) {
+fun LoginScreen(onGuest: () -> Unit, onGoogle: () -> Unit, googleBusy: Boolean = false, googleError: String? = null) {
     val c = LocalCandy.current
     // where she looks: the last touch; a few seconds after it she goes back to looking around by herself
     var gaze by remember { mutableStateOf<Offset?>(null) }
@@ -100,7 +100,21 @@ fun LoginScreen(onGuest: () -> Unit) {
                 Spacer(Modifier.width(10.dp))
                 Text(stringResource(R.string.login_guest), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
-            SoonButton(Icons.Rounded.Email, stringResource(R.string.login_google))
+            OutlinedButton(
+                onClick = onGoogle,
+                enabled = !googleBusy,
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+                shape = RoundedCornerShape(27.dp),
+                border = BorderStroke(1.dp, c.border),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = c.text),
+            ) {
+                Icon(Icons.Rounded.Email, null, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(10.dp))
+                Text(stringResource(R.string.login_google), fontSize = 15.sp)
+            }
+            if (googleError != null) {
+                Text(googleError, color = c.subtext, fontSize = 13.sp, textAlign = TextAlign.Center)
+            }
             SoonButton(Icons.Rounded.Favorite, stringResource(R.string.login_candy))
         }
     }

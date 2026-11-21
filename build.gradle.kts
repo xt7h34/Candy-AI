@@ -17,12 +17,14 @@ android {
         applicationId = "com.candyai"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10
-        versionName = "0.10"
+        versionCode = 11
+        versionName = "0.11"
         // Address of the Candy server: one line in api-url.txt. It can also be changed inside the app.
         val apiUrl = File(rootDir, "api-url.txt").takeIf { it.exists() }
             ?.readLines()?.firstOrNull()?.trim().orEmpty().replace("\"", "")
         buildConfigField("String", "SERVER_URL", "\"$apiUrl\"")
+        // Web application client ID (NOT the Android one): the ID token's audience, checked by the server
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"1049344857995-irthfor4kq2u8p6dp4ltq6afkbeqejfr.apps.googleusercontent.com\"")
     }
 
     signingConfigs {
@@ -68,4 +70,8 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    // Sign in with Google
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 }

@@ -64,10 +64,35 @@ class MainActivity : ComponentActivity() {
                     if (loggedIn) {
                         CandyApp(pendingConv) { pendingConv = null }
                     } else {
-                        LoginScreen(onGuest = {
-                            Store.loginDone = true
-                            loggedIn = true
-                        })
+                        val scope = rememberCoroutineScope()
+                        var googleBusy by remember { mutableStateOf(false) }
+                        var googleError by remember { mutableStateOf<String?>(null) }
+                        LoginScreen(
+                            onGuest = {
+                                Store.loginDone = true
+                                loggedIn = true
+                            },
+                            onGoogle = {
+                                googleBusy = true
+                                googleError = null
+                                scope.launch {
+                                    try {
+                                        Api.googleLogin(GoogleAuth.idToken(this@MainActivity))
+                                        Store.loginDone = true
+                                        loggedIn = true
+                                    } catch (e: GoogleCancelled) {
+                                        // closed the sheet: nothing to say
+                                    } catch (e: Exception) {
+                                        googleError = if (e is ApiException || e is java.io.IOException) errorMessage(this@MainActivity, e)
+                                        else getString(R.string.login_google_fail)
+                                    } finally {
+                                        googleBusy = false
+                                    }
+                                }
+                            },
+                            googleBusy = googleBusy,
+                            googleError = googleError,
+                        )
                     }
                 }
             }

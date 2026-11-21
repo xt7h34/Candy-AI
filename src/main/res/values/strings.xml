@@ -60,4 +60,5 @@
     <string name="login_google">المتابعة بحساب Google</string>
     <string name="login_candy">حساب كاندي</string>
     <string name="login_soon">قريبًا</string>
+    <string name="login_google_fail">مقدرناش نسجّل دخولك بحساب Google. حاول تاني.</string>
 </resources>

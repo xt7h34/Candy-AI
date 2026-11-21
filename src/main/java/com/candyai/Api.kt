@@ -106,6 +106,12 @@ object Api {
         Store.token = r.getString("token")
     }
 
+    /** Sign in with a Google ID token. The current (guest) token is sent too, so the server can attach the account to it and keep the chats. */
+    suspend fun googleLogin(idToken: String) {
+        val r = parse(raw("POST", "/auth/google", JSONObject().put("id_token", idToken)))
+        Store.token = r.getString("token")
+    }
+
     /** Runs a request with the saved token; logs in first if there is none, and once more if the server says 401. */
     private suspend fun <T> authed(block: suspend () -> T): T {
         if (Store.token == null) login()
