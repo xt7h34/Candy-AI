@@ -61,4 +61,12 @@
     <string name="login_candy">حساب كاندي</string>
     <string name="login_soon">قريبًا</string>
     <string name="login_google_fail">مقدرناش نسجّل دخولك بحساب Google. حاول تاني.</string>
+    <string name="attach">إرفاق</string>
+    <string name="attach_camera">الكاميرا</string>
+    <string name="attach_gallery">صورة من المعرض</string>
+    <string name="attach_file">ملف نصي</string>
+    <string name="attach_remove">إزالة</string>
+    <string name="attach_fail">مقدرتش أقرا الملف ده. جرّب صورة أو ملف نصي (txt أو md أو csv أو json).</string>
+    <string name="attach_image_limit">وصلت للحد اليومي للصور. جرّب بكرة.</string>
+    <string name="attach_max">أقصى حد 3 مرفقات في الرسالة.</string>
 </resources>

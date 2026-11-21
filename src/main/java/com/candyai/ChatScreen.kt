@@ -7,6 +7,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.net.Uri
 import android.provider.Settings
 import android.text.format.DateUtils
 import android.util.Base64
@@ -118,6 +119,7 @@ import androidx.compose.ui.unit.coerceIn
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import java.io.File
 import java.io.IOException
 import kotlin.random.Random
@@ -166,6 +168,10 @@ fun ChatScreen(
     var recPaused by remember { mutableStateOf(false) }
     var limitReached by remember { mutableStateOf(false) }
     var recElapsed by remember { mutableStateOf(0L) }
+    // what is waiting to be sent with the next message (pictures and text files), and the camera's target file
+    val pending = remember { mutableStateListOf<Pending>() }
+    var attachMenu by remember { mutableStateOf(false) }
+    var camFile by remember { mutableStateOf<File?>(null) }
     val amps = remember { mutableStateListOf<Float>() }
     val listState = rememberLazyListState()
     val reduceMotion = remember { Settings.Global.getFloat(ctx.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }
@@ -279,17 +285,24 @@ fun ChatScreen(
 
     // sends one message; with speakReply Candy's answer is read out loud as soon as it is complete (messages that came from the mic)
     fun sendText(text: String, speakReply: Boolean) {
-        if (text.isEmpty() || sending) return
+        if ((text.isEmpty() && pending.isEmpty()) || sending) return
         sending = true
         error = ""
         input = ""
+        val files = pending.toList()
+        pending.clear()
         scope.launch {
             var sent = false
             try {
                 val cid = convId ?: Api.createConversation().also { convId = it; onConversation(it) }
-                val job = Api.sendMessage(cid, text)
+                val job = Api.sendMessage(cid, text, files)
                 sent = true
-                msgs.add(AiMsg(-System.nanoTime(), "user", text, System.currentTimeMillis()))
+                msgs.add(
+                    AiMsg(
+                        -System.nanoTime(), "user", text, System.currentTimeMillis(),
+                        atts = files.mapIndexed { i, p -> AttRef(-(i + 1).toLong(), p.kind, p.name, p.thumb) },
+                    ),
+                )
                 follow(job)
                 if (speakReply) {
                     val last = msgs.lastOrNull()
@@ -298,7 +311,7 @@ fun ChatScreen(
             } catch (e: Exception) {
                 error = errorMessage(ctx, e)
                 // the message never reached the server: give the text back so nothing is lost
-                if (!sent) input = text
+                if (!sent) { input = text; pending.addAll(files) }
             } finally {
                 sending = false
                 jobId = null
@@ -377,6 +390,56 @@ fun ChatScreen(
     }
 
     fun send() = sendText(input.trim(), false)
+
+    // ───── the + button: camera, gallery, text file ─────
+    fun addImages(uris: List<Uri>) {
+        val room = AttachKit.MAX_FILES - pending.size
+        if (room <= 0) { error = ctx.getString(R.string.attach_max); return }
+        scope.launch {
+            for (u in uris.take(room)) {
+                val p = AttachKit.fromImage(ctx, u)
+                if (p != null) pending.add(p) else error = ctx.getString(R.string.attach_fail)
+            }
+        }
+    }
+    val galleryPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(AttachKit.MAX_FILES)) { uris ->
+        if (uris.isNotEmpty()) addImages(uris)
+    }
+    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+        val f = camFile
+        camFile = null
+        if (f != null) {
+            if (ok) {
+                scope.launch {
+                    val p = if (pending.size < AttachKit.MAX_FILES) AttachKit.fromImage(ctx, Uri.fromFile(f)) else null
+                    if (p != null) pending.add(p) else error = ctx.getString(R.string.attach_fail)
+                    f.delete()
+                }
+            } else {
+                f.delete()
+            }
+        }
+    }
+    val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            if (pending.size >= AttachKit.MAX_FILES) { error = ctx.getString(R.string.attach_max); return@rememberLauncherForActivityResult }
+            scope.launch {
+                val p = AttachKit.fromText(ctx, uri)
+                if (p != null) pending.add(p) else error = ctx.getString(R.string.attach_fail)
+            }
+        }
+    }
+    fun openCamera() {
+        if (pending.size >= AttachKit.MAX_FILES) { error = ctx.getString(R.string.attach_max); return }
+        try {
+            val dir = File(ctx.cacheDir, "updates").apply { mkdirs() }
+            val f = File.createTempFile("cam_", ".jpg", dir)
+            camFile = f
+            cameraLauncher.launch(FileProvider.getUriForFile(ctx, "${ctx.packageName}.updates", f))
+        } catch (e: Exception) {
+            error = ctx.getString(R.string.attach_fail)
+        }
+    }
 
     // ───── talking to her: record, turn it into text on the server, send it and hear the answer ─────
     fun startRecording() {
@@ -624,10 +687,11 @@ fun ChatScreen(
                     )
                 }
             } else {
-                val showMic = input.isBlank()
-                val canSend = !listening && (showMic || input.isNotBlank())
+                val showMic = input.isBlank() && pending.isEmpty()
+                val canSend = !listening && (showMic || input.isNotBlank() || pending.isNotEmpty())
                 // which side the send / voice button sits on (picked in the settings)
                 val buttonFirst = sendOnLeft != (LocalLayoutDirection.current == LayoutDirection.Rtl)
+                if (pending.isNotEmpty()) PendingStrip(pending) { pending.remove(it) }
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.Bottom,
@@ -635,18 +699,38 @@ fun ChatScreen(
                 ) {
                     val inputBox: @Composable RowScope.() -> Unit = {
                     Surface(shape = MaterialTheme.shapes.extraLarge, color = cs.surfaceContainerHigh, modifier = Modifier.weight(1f)) {
-                        Box(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                            if (input.isEmpty()) {
-                                Text(stringResource(R.string.ai_hint), color = cs.onSurfaceVariant)
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Box {
+                                Box(
+                                    Modifier.padding(start = 4.dp, bottom = 4.dp).size(40.dp).clip(CircleShape)
+                                        .clickable(enabled = !sending) { attachMenu = true },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.attach), tint = cs.onSurfaceVariant)
+                                }
+                                AttachMenu(
+                                    expanded = attachMenu,
+                                    onDismiss = { attachMenu = false },
+                                    onCamera = { openCamera() },
+                                    onGallery = {
+                                        galleryPicker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                                    },
+                                    onFile = { filePicker.launch(arrayOf("text/*", "application/json", "application/xml", "application/csv")) },
+                                )
                             }
-                            BasicTextField(
-                                value = input,
-                                onValueChange = { input = it.take(1500) },
-                                textStyle = LocalTextStyle.current.copy(color = cs.onSurface),
-                                cursorBrush = SolidColor(cs.primary),
-                                maxLines = 5,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
+                            Box(Modifier.weight(1f).padding(start = 4.dp, end = 16.dp, top = 12.dp, bottom = 12.dp)) {
+                                if (input.isEmpty()) {
+                                    Text(stringResource(R.string.ai_hint), color = cs.onSurfaceVariant)
+                                }
+                                BasicTextField(
+                                    value = input,
+                                    onValueChange = { input = it.take(1500) },
+                                    textStyle = LocalTextStyle.current.copy(color = cs.onSurface),
+                                    cursorBrush = SolidColor(cs.primary),
+                                    maxLines = 5,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
                         }
                     }
                     }

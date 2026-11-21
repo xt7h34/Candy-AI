@@ -203,7 +203,10 @@ internal fun AiBubble(m: AiMsg) {
                     .background(Brush.linearGradient(listOf(cs.primary, lerp(cs.primary, cs.tertiary, 0.5f))))
                     .padding(horizontal = 14.dp, vertical = 9.dp),
             ) {
-                Text(m.text, color = cs.onPrimary, style = MaterialTheme.typography.bodyLarge)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp), horizontalAlignment = Alignment.End) {
+                    for (a in m.atts) AttachView(a)
+                    if (m.text.isNotBlank()) Text(m.text, color = cs.onPrimary, style = MaterialTheme.typography.bodyLarge)
+                }
             }
         } else {
             Box(

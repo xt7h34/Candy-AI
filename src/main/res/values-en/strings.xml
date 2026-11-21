@@ -59,4 +59,12 @@
     <string name="login_candy">Candy account</string>
     <string name="login_soon">Soon</string>
     <string name="login_google_fail">Couldn\'t sign you in with Google. Try again.</string>
+    <string name="attach">Attach</string>
+    <string name="attach_camera">Camera</string>
+    <string name="attach_gallery">Photo from gallery</string>
+    <string name="attach_file">Text file</string>
+    <string name="attach_remove">Remove</string>
+    <string name="attach_fail">Couldn\'t read that file. Try a picture or a text file (txt, md, csv, json).</string>
+    <string name="attach_image_limit">You reached today\'s picture limit. Try again tomorrow.</string>
+    <string name="attach_max">At most 3 attachments per message.</string>
 </resources>

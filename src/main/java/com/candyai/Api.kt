@@ -23,10 +23,11 @@ class AiMsg(
     val memRemoved: List<String> = emptyList(),
     /** 1 = liked, -1 = disliked, 0 = nothing. */
     val react: Int = 0,
+    val atts: List<AttRef> = emptyList(),
 ) {
     val mine: Boolean get() = role == "user"
-    fun withReact(v: Int) = AiMsg(n, role, text, at, memAdded, memRemoved, v)
-    fun withText(t: String) = AiMsg(n, role, t, at, memAdded, memRemoved, react)
+    fun withReact(v: Int) = AiMsg(n, role, text, at, memAdded, memRemoved, v, atts)
+    fun withText(t: String) = AiMsg(n, role, t, at, memAdded, memRemoved, react, atts)
 }
 
 class PollResult(
@@ -151,13 +152,31 @@ object Api {
         return (0 until arr.length()).map {
             val o = arr.getJSONObject(it)
             val (a, r) = memLists(o.optJSONObject("mem"))
-            AiMsg(o.getLong("id"), o.getString("role"), o.getString("content"), o.getLong("created_at"), a, r, o.optInt("react", 0))
+            val atts = ArrayList<AttRef>()
+            o.optJSONArray("attachments")?.let { arr ->
+                for (k in 0 until arr.length()) arr.optJSONObject(k)?.let { atts.add(AttRef(it.optLong("id"), it.optString("kind"), it.optString("name"))) }
+            }
+            AiMsg(o.getLong("id"), o.getString("role"), o.getString("content"), o.getLong("created_at"), a, r, o.optInt("react", 0), atts)
         }
     }
 
     // ───── replies (streaming) ─────
-    suspend fun sendMessage(conversationId: String, text: String): String =
-        json("POST", "/conversations/$conversationId/messages", JSONObject().put("text", text)).getString("job_id")
+    suspend fun sendMessage(conversationId: String, text: String, files: List<Pending> = emptyList()): String {
+        val body = JSONObject().put("text", text)
+        if (files.isNotEmpty()) {
+            val arr = org.json.JSONArray()
+            for (f in files) arr.put(JSONObject().put("kind", f.kind).put("mime", f.mime).put("name", f.name).put("data", f.b64))
+            body.put("attachments", arr)
+        }
+        return json("POST", "/conversations/$conversationId/messages", body, readTimeoutMs = 45000).getString("job_id")
+    }
+
+    /** A picture or file attached to a message, as raw bytes. */
+    suspend fun attachmentBytes(id: Long): ByteArray = authed {
+        val r = raw("GET", "/attachments/$id", readTimeoutMs = 30000)
+        if (r.status !in 200..299) parse(r)
+        r.bytes
+    }
 
     suspend fun regenerate(conversationId: String): String =
         json("POST", "/conversations/$conversationId/regenerate", JSONObject()).getString("job_id")
@@ -228,6 +247,8 @@ fun errorMessage(ctx: Context, e: Throwable): String = when {
     e is ApiException && e.code == "voice_limit" -> ctx.getString(R.string.ai_voice_limit)
     e is ApiException && e.code == "voice_empty" -> ctx.getString(R.string.ai_voice_empty)
     e is ApiException && e.code == "stt_empty" -> ctx.getString(R.string.ai_stt_empty)
+    e is ApiException && e.code == "image_limit" -> ctx.getString(R.string.attach_image_limit)
+    e is ApiException && (e.code == "bad_attachment" || e.code == "attachment_too_large" || e.code == "too_many_attachments" || e.status == 413) -> ctx.getString(R.string.attach_fail)
     e is ApiException && e.code == "not_found" -> ctx.getString(R.string.ai_voice_gone)
     e is ApiException && (e.code == "voice_unavailable" || e.code == "stt_unavailable") -> ctx.getString(R.string.ai_voice_fail)
     e is ApiException -> ctx.getString(R.string.err_generic)
