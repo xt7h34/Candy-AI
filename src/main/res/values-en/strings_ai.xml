@@ -9,8 +9,6 @@
     <string name="ai_copied">Copied</string>
     <string name="ai_delete">Delete</string>
     <string name="ai_disclaimer">Candy is an AI and can make mistakes.</string>
-    <string name="ai_empty_text">Ask me anything, or just chat with me.</string>
-    <string name="ai_empty_title">Hi, I\'m Candy 🍬</string>
     <string name="ai_hint">Message Candy</string>
     <string name="ai_listening">Listening…</string>
     <string name="ai_load_older">Load older</string>

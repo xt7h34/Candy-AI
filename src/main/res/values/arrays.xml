@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- one of these is shown at random every time an empty chat opens -->
+    <string-array name="ai_greetings">
+        <item>دورك دلوقتي</item>
+        <item>عندك أفكار جديدة نتكلم فيها؟</item>
+        <item>إيه اللي في بالك النهارده؟</item>
+        <item>نبدأ بإيه؟</item>
+        <item>أنا سامعاك</item>
+        <item>في حاجة جديدة نتكلم فيها؟</item>
+        <item>إيه الجديد؟</item>
+        <item>جاهزة لأي سؤال أو سوالف</item>
+    </string-array>
+</resources>

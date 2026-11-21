@@ -49,4 +49,9 @@
     <string name="settings_language_hint">لغة التطبيق. وكاندي بترد بنفس اللغة اللي بتكتب بيها.</string>
     <string name="lang_ar" translatable="false">العربية</string>
     <string name="lang_en" translatable="false">English</string>
+    <string name="settings_theme">الثيم</string>
+    <string name="settings_theme_hint">بيتغير فورًا من غير ما التطبيق يتقفل</string>
+    <string name="theme_system">تلقائي</string>
+    <string name="theme_light">فاتح</string>
+    <string name="theme_dark">غامق</string>
 </resources>

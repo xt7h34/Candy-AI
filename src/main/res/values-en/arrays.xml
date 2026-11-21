@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- one of these is shown at random every time an empty chat opens -->
+    <string-array name="ai_greetings">
+        <item>Your turn</item>
+        <item>Do you have any new ideas to discuss?</item>
+        <item>What\'s on your mind today?</item>
+        <item>Where should we start?</item>
+        <item>I\'m all ears</item>
+        <item>Got something new to talk about?</item>
+        <item>What\'s new?</item>
+        <item>Ready when you are</item>
+    </string-array>
+</resources>

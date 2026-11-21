@@ -102,6 +102,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -144,6 +145,9 @@ fun ChatScreen(
 
     // A new chat only becomes a real conversation on the first message, so empty chats never pile up.
     var convId by remember { mutableStateOf(startId) }
+    // a different friendly line every time a new chat opens
+    val greetings = stringArrayResource(R.array.ai_greetings)
+    val greeting = remember { greetings.random() }
     val msgs = remember { mutableStateListOf<AiMsg>() }
     var loading by remember { mutableStateOf(startId != null) }
     var input by remember { mutableStateOf("") }
@@ -527,24 +531,28 @@ fun ChatScreen(
                 if (!loading && msgs.isEmpty() && error.isBlank() && !sending) {
                     item(key = "empty") {
                         Column(
+                            // no box around it: only a soft fade so the text stays readable over the picture
                             Modifier.fillMaxWidth().padding(top = 36.dp)
-                                .background(cs.background.copy(alpha = 0.88f), MaterialTheme.shapes.extraLarge)
+                                .background(
+                                    Brush.verticalGradient(
+                                        colorStops = arrayOf(0f to Color.Transparent, 0.22f to cs.background.copy(alpha = 0.9f), 1f to cs.background.copy(alpha = 0.9f)),
+                                    ),
+                                )
                                 .padding(16.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            AiAvatar(96.dp)
-                            Text(
-                                stringResource(R.string.ai_empty_title),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = cs.onBackground,
-                                textAlign = TextAlign.Center,
+                            Image(
+                                painter = painterResource(R.drawable.candy_logo),
+                                contentDescription = null,
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.height(112.dp),
                             )
                             Text(
-                                stringResource(R.string.ai_empty_text),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = cs.onSurfaceVariant,
+                                greeting,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = cs.onBackground,
                                 textAlign = TextAlign.Center,
                             )
                             Spacer(Modifier.height(6.dp))

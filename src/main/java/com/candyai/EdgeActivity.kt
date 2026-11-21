@@ -159,6 +159,7 @@ class EdgeActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         Store.init(applicationContext)
+        ThemeMode.load()
         setContent {
             CandyTheme {
                 CompositionLocalProvider(LocalLayoutDirection provides Lang.direction(this@EdgeActivity)) {

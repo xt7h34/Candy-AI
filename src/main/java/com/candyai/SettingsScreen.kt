@@ -3,6 +3,20 @@ package com.candyai
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.material.icons.rounded.BrightnessAuto
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -123,6 +137,18 @@ fun SettingsScreen(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     LangChip(stringResource(R.string.lang_ar), current == "ar", Modifier.weight(1f)) { if (current != "ar") Lang.change(ctx, "ar") }
                     LangChip(stringResource(R.string.lang_en), current == "en", Modifier.weight(1f)) { if (current != "en") Lang.change(ctx, "en") }
+                }
+            }
+
+            // theme: switches at once, no restart
+            SettingsCard {
+                val mode = ThemeMode.mode
+                Text(stringResource(R.string.settings_theme), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.settings_theme_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    ThemeChoice(Icons.Rounded.BrightnessAuto, stringResource(R.string.theme_system), mode == "system", Modifier.weight(1f)) { ThemeMode.set("system") }
+                    ThemeChoice(Icons.Rounded.LightMode, stringResource(R.string.theme_light), mode == "light", Modifier.weight(1f)) { ThemeMode.set("light") }
+                    ThemeChoice(Icons.Rounded.DarkMode, stringResource(R.string.theme_dark), mode == "dark", Modifier.weight(1f)) { ThemeMode.set("dark") }
                 }
             }
 
@@ -315,5 +341,55 @@ private fun SendOption(left: Boolean, selected: Boolean, label: String, onClick:
             }
             Text(label, color = if (selected) c.text else c.subtext, fontSize = 13.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
         }
+    }
+}
+
+/** One theme button. When it is picked its icon spins and bounces, and the whole button pops, so the change feels playful. */
+@Composable
+private fun ThemeChoice(icon: ImageVector, label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val c = LocalCandy.current
+    val shape = RoundedCornerShape(16.dp)
+    var taps by remember { mutableIntStateOf(0) }
+    val spin = remember { Animatable(0f) }
+    val bounce = remember { Animatable(1f) }
+    LaunchedEffect(taps) {
+        if (taps == 0) return@LaunchedEffect
+        launch {
+            spin.snapTo(0f)
+            spin.animateTo(360f, tween(650, easing = FastOutSlowInEasing))
+        }
+        bounce.animateTo(1.5f, tween(140))
+        bounce.animateTo(1f, spring(Spring.DampingRatioHighBouncy, Spring.StiffnessLow))
+    }
+    val pop by animateFloatAsState(
+        if (selected) 1f else 0.94f,
+        spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow),
+        label = "pop",
+    )
+    Column(
+        modifier
+            .graphicsLayer { scaleX = pop; scaleY = pop }
+            .clip(shape)
+            .background(if (selected) c.accent.copy(alpha = 0.18f) else c.bg)
+            .border(if (selected) 2.dp else 1.dp, if (selected) c.accent else c.border, shape)
+            .clickable {
+                taps++
+                onClick()
+            }
+            .padding(vertical = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(
+            icon,
+            null,
+            tint = if (selected) c.accent else c.subtext,
+            modifier = Modifier.size(28.dp).graphicsLayer {
+                rotationZ = spin.value
+                scaleX = bounce.value
+                scaleY = bounce.value
+            },
+        )
+        Text(label, color = if (selected) c.text else c.subtext, fontSize = 13.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
     }
 }

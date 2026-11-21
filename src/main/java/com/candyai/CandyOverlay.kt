@@ -39,6 +39,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.Lifecycle
@@ -147,6 +150,7 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
     override fun onCreate() {
         super.onCreate()
         Store.init(applicationContext)
+        ThemeMode.load()
         savedState.performAttach()
         savedState.performRestore(null)
         registry.currentState = Lifecycle.State.CREATED
@@ -243,7 +247,7 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
                 WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
                 WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
             PixelFormat.TRANSLUCENT,
-        ).apply { gravity = Gravity.TOP or Gravity.START }
+        ).apply { gravity = Gravity.TOP or Gravity.LEFT }
 
         val animated = Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
         val frame = FrameLayout(this)
@@ -388,26 +392,29 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
 
 @Composable
 private fun OverlayContent(hidden: Boolean, left: Boolean, animated: Boolean) {
-    if (hidden) {
-        // only a small tab stays on the edge; tap it to bring her back
-        Box(
-            Modifier
-                .size(TAB_W, TAB_H)
-                .clip(
-                    if (left) RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
-                    else RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
+    // her place and shape depend only on the edge she sits on, never on the app language
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        if (hidden) {
+            // only a small tab stays on the edge; tap it to bring her back
+            Box(
+                Modifier
+                    .size(TAB_W, TAB_H)
+                    .clip(
+                        if (left) RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
+                        else RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp),
+                    )
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.92f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.candy_ai_avatar),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.size(22.dp).clip(CircleShape),
                 )
-                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.92f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Image(
-                painter = painterResource(R.drawable.candy_ai_avatar),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.size(22.dp).clip(CircleShape),
-            )
+            }
+        } else {
+            CandyPeek(PEEK_W, PEEK_H, animated, 0, 0L, mirror = left)
         }
-    } else {
-        CandyPeek(PEEK_W, PEEK_H, animated, 0, 0L, mirror = left)
     }
 }

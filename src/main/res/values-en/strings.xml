@@ -47,4 +47,9 @@
     <string name="settings_send_side_hint">The button that sends your message or records your voice</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_hint">The app language. Candy replies in the language you write in.</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_hint">Changes instantly, no restart</string>
+    <string name="theme_system">Auto</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
 </resources>

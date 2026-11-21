@@ -1,7 +1,10 @@
 package com.candyai
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
@@ -9,7 +12,10 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -55,7 +61,7 @@ val DarkCandy = CandyColors(
     border = Color(0xFF45265A),
 )
 
-val LocalCandy = staticCompositionLocalOf { LightCandy }
+val LocalCandy = compositionLocalOf { LightCandy }
 
 private val LightScheme = lightColorScheme(
     primary = Color(0xFFF7567C), onPrimary = Color.White,
@@ -118,11 +124,63 @@ private val CandyTypography = Typography(
     labelSmall = TextStyle(fontFamily = AmmanFamily, fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold),
 )
 
+/** Light, dark, or follow the phone. One state for the whole process, so changing it redraws every screen at once, without restarting anything. */
+object ThemeMode {
+    var mode by mutableStateOf("system")
+        private set
+
+    fun load() { mode = Store.themeMode }
+
+    fun set(m: String) {
+        Store.themeMode = m
+        mode = m
+    }
+}
+
 @Composable
-fun CandyTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalCandy provides if (dark) DarkCandy else LightCandy) {
+fun rememberDark(): Boolean {
+    val system = isSystemInDarkTheme()
+    return when (ThemeMode.mode) {
+        "dark" -> true
+        "light" -> false
+        else -> system
+    }
+}
+
+// every colour glides to its new value, so switching theme is a soft fade instead of a jump
+@Composable
+private fun Color.glide(): Color = animateColorAsState(this, tween(450), label = "theme").value
+
+@Composable
+private fun CandyColors.glide() = CandyColors(
+    bg = bg.glide(), surface = surface.glide(), text = text.glide(), subtext = subtext.glide(),
+    accent = accent.glide(), onAccent = onAccent.glide(), userBubble = userBubble.glide(),
+    onUserBubble = onUserBubble.glide(), border = border.glide(),
+)
+
+@Composable
+private fun ColorScheme.glide() = copy(
+    primary = primary.glide(), onPrimary = onPrimary.glide(),
+    primaryContainer = primaryContainer.glide(), onPrimaryContainer = onPrimaryContainer.glide(),
+    secondary = secondary.glide(), onSecondary = onSecondary.glide(),
+    secondaryContainer = secondaryContainer.glide(), onSecondaryContainer = onSecondaryContainer.glide(),
+    tertiary = tertiary.glide(), onTertiary = onTertiary.glide(),
+    background = background.glide(), onBackground = onBackground.glide(),
+    surface = surface.glide(), onSurface = onSurface.glide(),
+    surfaceVariant = surfaceVariant.glide(), onSurfaceVariant = onSurfaceVariant.glide(),
+    surfaceContainerLowest = surfaceContainerLowest.glide(), surfaceContainerLow = surfaceContainerLow.glide(),
+    surfaceContainer = surfaceContainer.glide(), surfaceContainerHigh = surfaceContainerHigh.glide(),
+    surfaceContainerHighest = surfaceContainerHighest.glide(),
+    outline = outline.glide(), outlineVariant = outlineVariant.glide(), error = error.glide(),
+)
+
+@Composable
+fun CandyTheme(dark: Boolean = rememberDark(), content: @Composable () -> Unit) {
+    val candy = (if (dark) DarkCandy else LightCandy).glide()
+    val scheme = (if (dark) DarkScheme else LightScheme).glide()
+    CompositionLocalProvider(LocalCandy provides candy) {
         MaterialTheme(
-            colorScheme = if (dark) DarkScheme else LightScheme,
+            colorScheme = scheme,
             shapes = CandyShapes,
             typography = CandyTypography,
             content = content,

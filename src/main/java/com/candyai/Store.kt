@@ -43,4 +43,9 @@ object Store {
     var sendSide: String
         get() = (sp.getString("send_side", null) ?: if (language == "en") "right" else "left").let { if (it == "left") "left" else "right" }
         set(v) { sp.edit().putString("send_side", if (v == "left") "left" else "right").apply() }
+
+    /** "system" (follow the phone, default), "light" or "dark". */
+    var themeMode: String
+        get() = sp.getString("theme", "system").let { if (it == "light" || it == "dark") it else "system" }
+        set(v) { sp.edit().putString("theme", if (v == "light" || v == "dark") v else "system").apply() }
 }

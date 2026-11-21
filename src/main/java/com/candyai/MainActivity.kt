@@ -1,11 +1,13 @@
 package com.candyai
 
 import android.content.Context
+import android.graphics.Color as AndroidColor
 import android.content.Intent
 import android.os.Bundle
 import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
@@ -18,6 +20,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
@@ -43,10 +46,18 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         Store.init(applicationContext)
+        ThemeMode.load()
         // not after a restart (language change): the intent still carries the old request
         if (savedInstanceState == null) pendingConv = intent?.getStringExtra("open_conv")
         setContent {
-            CandyTheme {
+            val dark = rememberDark()
+            // the bars' icons follow the app's theme, which can differ from the phone's
+            SideEffect {
+                val bars = if (dark) SystemBarStyle.dark(AndroidColor.TRANSPARENT)
+                else SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT)
+                enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
+            }
+            CandyTheme(dark) {
                 // right-to-left for Arabic, left-to-right for English
                 CompositionLocalProvider(LocalLayoutDirection provides Lang.direction(this@MainActivity)) {
                     CandyApp(pendingConv) { pendingConv = null }
