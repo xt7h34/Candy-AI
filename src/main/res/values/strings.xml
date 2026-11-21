@@ -104,4 +104,6 @@
     <string name="see_last_title">آخر مرة اتفتحت فيها كاندي كمساعد:</string>
     <string name="see_last_none">لسه ما اتفتحتش</string>
     <string name="see_try_voice">جرّب الصوت</string>
+    <string name="see_screenshot">لقطة شاشة</string>
+    <string name="see_capture_note">كاندي بتاخد لقطة للشاشة</string>
 </resources>

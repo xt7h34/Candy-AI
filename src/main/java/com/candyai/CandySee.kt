@@ -61,6 +61,14 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import android.app.Activity
+import android.graphics.Bitmap
+import android.media.projection.MediaProjectionManager
+import android.net.Uri
+import androidx.core.content.FileProvider
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.ui.graphics.graphicsLayer
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
@@ -88,6 +96,10 @@ class SeeChat(private val ctx: Context, private val scope: CoroutineScope, var s
     var recording by mutableStateOf(false)
     var error by mutableStateOf("")
     var lastAnswer by mutableStateOf("")
+    /** Pictures and files waiting to go with the next message (the "+" menu, a screenshot). */
+    val pending = mutableStateListOf<Pending>()
+    /** True while a screenshot is being taken: the panel hides itself so it is not in the picture. */
+    var capturing by mutableStateOf(false)
     private var jobId: String? = null
     private var drawn: List<AttRef> = emptyList()
     private var messageId = 0L
@@ -227,58 +239,152 @@ class SeeChat(private val ctx: Context, private val scope: CoroutineScope, var s
 }
 
 /**
- * The Candy See capsule: a small rounded bar at the bottom of the screen. The answer grows out of the capsule itself
- * (upward, up to a limit, then it scrolls). Used by Circle to Search, the voice panel and floating Candy.
+ * The Candy See capsule: a short pill at the bottom of the screen ("+", Ask anything, translate, mic). It grows when you tap it,
+ * and the answer grows out of the capsule itself (upward, up to a limit, then it scrolls). Used by Circle to Search, the voice panel,
+ * floating Candy, the shortcut and the tile.
  *
- * [onSubmit] gets the text to send (the host decides what travels with it); [onTranslate] is the translate button.
- * [onAttachScreen] shows the optional "attach the screen" button (voice panel), [screenAttached] says it was pressed.
+ * [onSubmit] gets the text and whatever is attached (the host adds the screen or the circle when it has one).
+ * [frozen] = the host already holds the screen (Circle to Search): there is no "screenshot" item and the translate button calls [onTranslateScreen].
  */
 @Composable
 fun SeeCapsule(
     chat: SeeChat,
     hint: String,
-    onSubmit: (String) -> Unit,
-    onTranslate: (input: String) -> Unit,
+    onSubmit: (String, List<Pending>) -> Unit,
     onOpenFull: (String?) -> Unit,
     modifier: Modifier = Modifier,
-    autoFocus: Boolean = false,
     startListening: Boolean = false,
-    onAttachScreen: (() -> Unit)? = null,
-    screenAttached: Boolean = false,
+    frozen: Boolean = false,
+    onTranslateScreen: () -> Unit = {},
 ) {
     val ctx = LocalContext.current
     val cs = MaterialTheme.colorScheme
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     var input by remember { mutableStateOf("") }
-    var expanded by remember { mutableStateOf(false) }
+    var focused by remember { mutableStateOf(false) }
+    var tall by remember { mutableStateOf(false) }
+    var menu by remember { mutableStateOf(false) }
+    var camFile by remember { mutableStateOf<File?>(null) }
     val focus = remember { FocusRequester() }
     val scroll = rememberScrollState()
     val screenH = LocalConfiguration.current.screenHeightDp
-    val maxAnswer = (screenH * if (expanded) 0.7f else 0.36f).dp
+    val maxAnswer = (screenH * if (tall) 0.7f else 0.36f).dp
+    val grown = focused || chat.hasChat || chat.listening || chat.pending.isNotEmpty() || chat.recording || input.isNotEmpty()
 
+    fun send(text: String) {
+        val files = chat.pending.toList()
+        chat.pending.clear()
+        input = ""
+        onSubmit(text, files)
+    }
     fun submit() {
         val t = input.trim()
-        if (t.isEmpty() && !screenAttached) return
-        input = ""
-        onSubmit(t)
+        if (t.isEmpty() && chat.pending.isEmpty()) return
+        send(t)
+    }
+
+    // ───── "+" : camera, gallery, text file, screenshot ─────
+    fun full(): Boolean { if (chat.pending.size >= AttachKit.MAX_FILES) { chat.error = ctx.getString(R.string.attach_max); return true }; return false }
+    val gallery = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(AttachKit.MAX_FILES)) { uris ->
+        scope.launch {
+            for (u in uris) {
+                if (chat.pending.size >= AttachKit.MAX_FILES) break
+                val p = AttachKit.fromImage(ctx, u)
+                if (p != null) chat.pending.add(p) else chat.error = ctx.getString(R.string.attach_fail)
+            }
+        }
+    }
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+        val f = camFile
+        camFile = null
+        if (f != null) {
+            if (ok) scope.launch {
+                val p = if (chat.pending.size < AttachKit.MAX_FILES) AttachKit.fromImage(ctx, Uri.fromFile(f)) else null
+                if (p != null) chat.pending.add(p) else chat.error = ctx.getString(R.string.attach_fail)
+                f.delete()
+            } else f.delete()
+        }
+    }
+    val files = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null && !full()) scope.launch {
+            val p = AttachKit.fromText(ctx, uri)
+            if (p != null) chat.pending.add(p) else chat.error = ctx.getString(R.string.attach_fail)
+        }
+    }
+    fun openCamera() {
+        if (full()) return
+        try {
+            val dir = File(ctx.cacheDir, "updates").apply { mkdirs() }
+            val f = File.createTempFile("cam_", ".jpg", dir)
+            camFile = f
+            camera.launch(FileProvider.getUriForFile(ctx, "${ctx.packageName}.updates", f))
+        } catch (e: Exception) {
+            chat.error = ctx.getString(R.string.attach_fail)
+        }
+    }
+
+    // ───── a screenshot of what is behind the panel ─────
+    var afterShot by remember { mutableStateOf<(() -> Unit)?>(null) }
+    fun gotShot(bmp: Bitmap?) {
+        chat.capturing = false
+        scope.launch {
+            val p = bmp?.let { AttachKit.fromBitmap(it, "screen.jpg") }
+            if (p == null) { chat.error = ctx.getString(R.string.see_no_screen); afterShot = null; return@launch }
+            chat.error = ""
+            chat.pending.add(p)
+            val next = afterShot
+            afterShot = null
+            next?.invoke()
+        }
+    }
+    val projection = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->
+        val data = r.data
+        if (r.resultCode == Activity.RESULT_OK && data != null) {
+            chat.capturing = true
+            CaptureService.start(ctx.applicationContext, r.resultCode, data) { gotShot(it) }
+        } else {
+            afterShot = null
+        }
+    }
+    /** Screenshot into the attachments. The one the assistant already handed over is used when there is one; otherwise the system asks once. */
+    fun takeScreen(then: (() -> Unit)? = null) {
+        if (full()) return
+        val held = SeeHolder.shot
+        afterShot = then
+        if (held != null) { gotShot(held); return }
+        try {
+            projection.launch(ctx.getSystemService(MediaProjectionManager::class.java).createScreenCaptureIntent())
+        } catch (e: Exception) {
+            afterShot = null
+            chat.error = ctx.getString(R.string.see_no_screen)
+        }
+    }
+
+    // ───── translate: text if there is some, else the screen ─────
+    fun translate() {
+        val t = input.trim()
+        when {
+            t.isNotEmpty() -> send(ctx.getString(R.string.see_translate_text) + "\n" + t)
+            frozen -> onTranslateScreen()
+            chat.pending.any { it.kind == "image" } -> send(ctx.getString(R.string.cts_p_translate))
+            else -> takeScreen { send(ctx.getString(R.string.cts_p_translate)) }
+        }
     }
 
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) chat.startRecording() else chat.error = ctx.getString(R.string.voice_no_permission)
     }
     fun onMic() {
-        if (chat.recording) chat.finishRecording { onSubmit(it) }
+        if (chat.recording) chat.finishRecording { send(it) }
         else if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) chat.startRecording()
         else micPermission.launch(Manifest.permission.RECORD_AUDIO)
     }
 
     LaunchedEffect(Unit) {
         if (startListening) {
-            delay(250)
+            delay(400)
             if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) chat.startRecording()
             else micPermission.launch(Manifest.permission.RECORD_AUDIO)
-        } else if (autoFocus) {
-            delay(200)
-            try { focus.requestFocus() } catch (_: Exception) { }
         }
     }
     LaunchedEffect(chat.reply.length, chat.turns.size) { scroll.scrollTo(scroll.maxValue) }
@@ -287,20 +393,21 @@ fun SeeCapsule(
     val none = remember { MutableInteractionSource() }
     Column(
         modifier
+            .graphicsLayer { alpha = if (chat.capturing) 0f else 1f }   // not in the screenshot
             .fillMaxWidth()
             .navigationBarsPadding().imePadding()
-            .padding(horizontal = 12.dp).padding(bottom = 12.dp)
+            .padding(horizontal = if (grown) 12.dp else 28.dp).padding(bottom = 12.dp)
             .clickable(interactionSource = none, indication = null) { },   // touches on the capsule never fall through
     ) {
         Surface(
-            shape = RoundedCornerShape(28.dp),
+            shape = RoundedCornerShape(if (grown) 26.dp else 30.dp),
             color = cs.surfaceContainerHigh,
             shadowElevation = 10.dp,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (chat.hasChat || chat.listening) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp)) {
                         AiAvatar(24.dp)
                         Text(
                             stringResource(R.string.ai_name),
@@ -312,10 +419,10 @@ fun SeeCapsule(
                             TextButton(onClick = { onOpenFull(chat.convId) }) { Text(stringResource(R.string.cts_open_chat), color = cs.primary, fontSize = 13.sp) }
                         }
                         Icon(
-                            if (expanded) Icons.Rounded.KeyboardArrowDown else Icons.Rounded.KeyboardArrowUp,
+                            if (tall) Icons.Rounded.KeyboardArrowDown else Icons.Rounded.KeyboardArrowUp,
                             contentDescription = null,
                             tint = cs.onSurfaceVariant,
-                            modifier = Modifier.size(32.dp).clip(CircleShape).clickable { expanded = !expanded }.padding(4.dp),
+                            modifier = Modifier.size(32.dp).clip(CircleShape).clickable { tall = !tall }.padding(4.dp),
                         )
                     }
                     Column(Modifier.heightIn(max = maxAnswer).verticalScroll(scroll), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -327,17 +434,18 @@ fun SeeCapsule(
                         }
                     }
                 }
+                if (chat.pending.isNotEmpty()) PendingStrip(chat.pending) { chat.pending.remove(it) }
                 if (chat.recording) Muted(stringResource(R.string.edge_recording))
                 if (chat.error.isNotBlank()) ErrorText(chat.error)
 
                 val buttonFirst = (Store.sendSide == "left") != (LocalLayoutDirection.current == LayoutDirection.Rtl)
                 val actionButton: @Composable () -> Unit = {
-                    val showMic = input.isBlank() && !chat.sending && !screenAttached
-                    val active = chat.sending || chat.recording || (!chat.listening && (showMic || input.isNotBlank() || screenAttached))
+                    val showMic = input.isBlank() && !chat.sending && chat.pending.isEmpty()
+                    val active = chat.sending || chat.recording || (!chat.listening && (showMic || input.isNotBlank() || chat.pending.isNotEmpty()))
                     Surface(
                         shape = CircleShape,
                         color = if (active) cs.primary else cs.surfaceContainerHighest,
-                        modifier = Modifier.size(44.dp).clip(CircleShape).clickable(enabled = active) {
+                        modifier = Modifier.size(42.dp).clip(CircleShape).clickable(enabled = active) {
                             if (chat.sending) chat.stop() else if (chat.recording || showMic) onMic() else submit()
                         },
                     ) {
@@ -345,41 +453,49 @@ fun SeeCapsule(
                             val tint = if (active) cs.onPrimary else cs.onSurfaceVariant
                             when {
                                 chat.sending || chat.recording -> Icon(Icons.Rounded.Stop, stringResource(R.string.stop), tint = tint)
-                                showMic -> Icon(painterResource(R.drawable.ic_wave), null, tint = tint, modifier = Modifier.size(24.dp))
+                                showMic -> Icon(painterResource(R.drawable.ic_wave), null, tint = tint, modifier = Modifier.size(22.dp))
                                 else -> Icon(Icons.AutoMirrored.Rounded.Send, stringResource(R.string.send), tint = tint)
                             }
                         }
                     }
                 }
-                val field: @Composable (Modifier) -> Unit = { m ->
-                    Box(m.padding(horizontal = 10.dp, vertical = 10.dp), contentAlignment = Alignment.CenterStart) {
-                        if (input.isEmpty()) Text(hint, color = cs.onSurfaceVariant, fontSize = 15.sp)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    if (buttonFirst) actionButton()
+                    Box {
+                        Icon(
+                            Icons.Rounded.Add,
+                            contentDescription = stringResource(R.string.attach),
+                            tint = cs.onSurfaceVariant,
+                            modifier = Modifier.size(40.dp).clip(CircleShape).clickable(enabled = !chat.sending) { menu = true }.padding(8.dp),
+                        )
+                        AttachMenu(
+                            expanded = menu,
+                            onDismiss = { menu = false },
+                            onCamera = { openCamera() },
+                            onGallery = { gallery.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                            onFile = { files.launch(arrayOf("text/*", "application/json", "application/xml", "application/csv")) },
+                            onScreen = if (frozen) null else ({ takeScreen() }),
+                        )
+                    }
+                    Box(Modifier.weight(1f).padding(horizontal = 6.dp, vertical = 10.dp), contentAlignment = Alignment.CenterStart) {
+                        if (input.isEmpty()) Text(hint, color = cs.onSurfaceVariant, fontSize = 15.sp, maxLines = 1)
                         BasicTextField(
                             value = input,
                             onValueChange = { input = it.take(1500) },
                             textStyle = LocalTextStyle.current.copy(color = cs.onSurface, fontSize = 15.sp),
                             cursorBrush = SolidColor(cs.primary),
-                            maxLines = 4,
-                            modifier = Modifier.fillMaxWidth().focusRequester(focus).onFocusChanged { if (it.isFocused) chat.cancelRecording() },
+                            maxLines = if (focused) 4 else 1,
+                            modifier = Modifier.fillMaxWidth().focusRequester(focus).onFocusChanged {
+                                focused = it.isFocused
+                                if (it.isFocused) chat.cancelRecording()
+                            },
                         )
                     }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (buttonFirst) actionButton()
-                    if (onAttachScreen != null) {
-                        Icon(
-                            Icons.Rounded.Fullscreen,
-                            contentDescription = stringResource(R.string.see_attach_screen),
-                            tint = if (screenAttached) cs.primary else cs.onSurfaceVariant,
-                            modifier = Modifier.size(40.dp).clip(CircleShape).clickable { onAttachScreen() }.padding(8.dp),
-                        )
-                    }
-                    field(Modifier.weight(1f))
                     Icon(
                         Icons.Rounded.Translate,
                         contentDescription = stringResource(R.string.cts_translate),
                         tint = cs.onSurfaceVariant,
-                        modifier = Modifier.size(40.dp).clip(CircleShape).clickable { val t = input.trim(); input = ""; onTranslate(t) }.padding(8.dp),
+                        modifier = Modifier.size(40.dp).clip(CircleShape).clickable(enabled = !chat.sending) { translate() }.padding(8.dp),
                     )
                     if (!buttonFirst) actionButton()
                 }

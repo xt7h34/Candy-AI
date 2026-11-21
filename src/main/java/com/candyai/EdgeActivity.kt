@@ -24,7 +24,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
-import kotlinx.coroutines.launch
 
 /**
  * Candy See over any app: the capsule at the bottom of the live screen.
@@ -47,14 +46,16 @@ class EdgeActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        EdgeSession.current?.hide()   // let go of the assistant session so it never keeps eating touches
         SeeHolder.shot = null   // the screenshot is only ever kept in memory, and only while the panel is open
         super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        val was = this.intent.getBooleanExtra("voice", false)
         setIntent(intent)
-        recreate()   // a new invocation (maybe typing now, voice before) starts the panel fresh
+        if (was != intent.getBooleanExtra("voice", false)) recreate()   // only when it switches between typing and voice
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,55 +89,23 @@ fun EdgePanel(onClose: () -> Unit, onOpenFull: (String?) -> Unit, onReply: (Int)
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val chat = remember { SeeChat(ctx, scope, speakReplies = voice) }
-    var shotPending by remember { mutableStateOf<Pending?>(null) }   // the one screenshot attached on request (voice panel)
-
-    fun send(text: String) {
-        val files = listOfNotNull(shotPending)
-        shotPending = null
-        val t = if (text.isBlank() && files.isNotEmpty()) ctx.getString(R.string.see_screen_prompt) else text
-        chat.ask(t, files, onReply)
-    }
-
-    val attach: (() -> Unit)? = if (voice && SeeHolder.hasScreen) {
-        {
-            if (shotPending != null) {
-                shotPending = null
-            } else {
-                val b = SeeHolder.shot
-                if (b == null) {
-                    chat.error = ctx.getString(R.string.see_no_screen)
-                } else {
-                    scope.launch {
-                        val p = AttachKit.fromBitmap(b, "screen.jpg")
-                        if (p == null) chat.error = ctx.getString(R.string.attach_fail) else { chat.error = ""; shotPending = p }
-                    }
-                }
-            }
-        }
-    } else null
 
     val noRipple = remember { MutableInteractionSource() }
     Box(
-        Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (voice) 0.12f else 0.4f))
+        Modifier.fillMaxSize()
+            .background(Color.Black.copy(alpha = if (chat.capturing) 0f else if (voice) 0.12f else 0.4f))
             .clickable(interactionSource = noRipple, indication = null) { onClose() },
     ) {
         SeeCapsule(
             chat = chat,
-            hint = stringResource(if (voice) R.string.see_voice_hint else R.string.ai_hint),
-            onSubmit = { send(it) },
-            onTranslate = { t ->
-                when {
-                    t.isNotBlank() -> send(ctx.getString(R.string.see_translate_text) + "\n" + t)
-                    shotPending != null -> send(ctx.getString(R.string.cts_p_translate))
-                    chat.lastAnswer.isNotBlank() -> send(ctx.getString(R.string.see_translate_last))
-                }
+            hint = stringResource(if (voice) R.string.see_voice_hint else R.string.see_ask_anything),
+            onSubmit = { t, files ->
+                val text = if (t.isBlank() && files.isNotEmpty()) ctx.getString(R.string.see_screen_prompt) else t
+                chat.ask(text, files, onReply)
             },
             onOpenFull = onOpenFull,
             modifier = Modifier.align(Alignment.BottomCenter),
-            autoFocus = !voice,
             startListening = voice,
-            onAttachScreen = attach,
-            screenAttached = shotPending != null,
         )
     }
 }

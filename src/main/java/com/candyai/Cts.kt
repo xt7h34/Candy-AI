@@ -137,6 +137,11 @@ class CtsActivity : ComponentActivity() {
         super.onStop()
     }
 
+    override fun onDestroy() {
+        EdgeSession.current?.hide()
+        super.onDestroy()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -253,13 +258,13 @@ fun CtsScreen(shot: Bitmap, onClose: () -> Unit, onOpenFull: (String?) -> Unit) 
     fun fail() { chat.error = ctx.getString(R.string.attach_fail) }
 
     /** Sends text. The picture (the circle, or the whole screen if nothing was circled) goes along only the first time. */
-    fun askWith(text: String) {
+    fun askWith(text: String, extra: List<Pending> = emptyList()) {
         if (chat.sending) return
         scope.launch {
-            val files = if (attached) emptyList() else listOfNotNull(region ?: AttachKit.fromBitmap(shot, "screen.jpg"))
-            if (!attached && files.isEmpty()) { fail(); return@launch }
+            val first = if (attached) emptyList() else listOfNotNull(region ?: AttachKit.fromBitmap(shot, "screen.jpg"))
+            if (!attached && first.isEmpty()) { fail(); return@launch }
             attached = true
-            chat.ask(text, files)
+            chat.ask(text, first + extra)
         }
     }
 
@@ -407,13 +412,11 @@ fun CtsScreen(shot: Bitmap, onClose: () -> Unit, onOpenFull: (String?) -> Unit) 
         SeeCapsule(
             chat = chat,
             hint = stringResource(R.string.see_ask_anything),
-            onSubmit = { askWith(it) },
-            onTranslate = { t ->
-                if (t.isBlank()) askWith(ctx.getString(R.string.cts_p_translate))
-                else askWith(ctx.getString(R.string.see_translate_text) + "\n" + t)
-            },
+            onSubmit = { t, extra -> askWith(t, extra) },
             onOpenFull = onOpenFull,
             modifier = Modifier.align(Alignment.BottomCenter),
+            frozen = true,
+            onTranslateScreen = { askWith(ctx.getString(R.string.cts_p_translate)) },
         )
     }
 }

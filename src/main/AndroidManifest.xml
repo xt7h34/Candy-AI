@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <application
@@ -59,6 +60,12 @@
             android:windowSoftInputMode="adjustResize" />
 
         <!-- Candy Edge: Candy peeking from the edge of the phone's screen, over every app -->
+        <!-- Candy See: one screenshot taken after the person approves the system's "share your screen" prompt -->
+        <service
+            android:name=".CaptureService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+
         <service
             android:name=".CandyOverlayService"
             android:exported="false"

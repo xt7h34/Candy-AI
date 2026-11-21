@@ -102,4 +102,6 @@
     <string name="see_last_title">Last time Candy was opened as the assistant:</string>
     <string name="see_last_none">Not opened yet</string>
     <string name="see_try_voice">Try voice</string>
+    <string name="see_screenshot">Screenshot</string>
+    <string name="see_capture_note">Candy is taking a screenshot</string>
 </resources>

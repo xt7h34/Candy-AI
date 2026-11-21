@@ -59,6 +59,22 @@ class EdgeSession(context: Context) : VoiceInteractionSession(context) {
     private var voiceMode = false
     private val noScreenshot = Runnable { open(voice = false) }
 
+    companion object {
+        @Volatile var current: EdgeSession? = null
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        current = this
+        // the session has no screen of its own: only the Candy activity is shown, so the system window must never cover it or take its touches
+        try { setUiEnabled(false) } catch (_: Exception) { }
+    }
+
+    override fun onDestroy() {
+        if (current === this) current = null
+        super.onDestroy()
+    }
+
     override fun onShow(args: Bundle?, showFlags: Int) {
         super.onShow(args, showFlags)
         opened = false
