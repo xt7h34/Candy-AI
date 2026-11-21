@@ -128,4 +128,10 @@
     <string name="upd_noconfig">التحديثات مش متظبطة في النسخة دي.</string>
     <string name="upd_check">دوّر على تحديث</string>
     <string name="upd_auto">فحص تلقائي</string>
+    <string name="skin_title">شكل كاندي وهي مخبّية</string>
+    <string name="skin_hint">الشكل اللي يظهر على الحافة لما تخبّي كاندي، واللي بيتحول لدايرة عايمة لما تسحبه بعيد.</string>
+    <string name="skin_rect">مستطيل</string>
+    <string name="skin_donut">دونات</string>
+    <string name="skin_crown">تاج</string>
+    <string name="skin_bear">دبدوب</string>
 </resources>

@@ -126,4 +126,10 @@
     <string name="upd_noconfig">Updates are not set up for this build.</string>
     <string name="upd_check">Check for updates</string>
     <string name="upd_auto">Check automatically</string>
+    <string name="skin_title">How Candy looks when tucked away</string>
+    <string name="skin_hint">The shape that stays on the edge when you tuck Candy away. Pull it away from the edge and it floats.</string>
+    <string name="skin_rect">Tab</string>
+    <string name="skin_donut">Donut</string>
+    <string name="skin_crown">Crown</string>
+    <string name="skin_bear">Bear</string>
 </resources>

@@ -190,6 +190,32 @@ fun SettingsScreen(
                 }
             }
 
+            // what floating Candy looks like while she is tucked away
+            if (overlayOn) SettingsCard {
+                var skin by remember { mutableStateOf(TabSkin.of(Store.tabSkin)) }
+                Text(stringResource(R.string.skin_title), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.skin_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    for (k in TabSkin.values()) {
+                        val on = skin == k
+                        Column(
+                            Modifier.clip(RoundedCornerShape(14.dp)).clickable { skin = k; Store.tabSkin = k.key }.padding(6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Box(
+                                Modifier.size(64.dp).clip(RoundedCornerShape(14.dp)).background(c.bg)
+                                    .border(if (on) 2.5.dp else 1.dp, if (on) c.accent else c.border, RoundedCornerShape(14.dp)),
+                                contentAlignment = Alignment.Center,
+                            ) { SkinArt(k, 44.dp) }
+                            Text(
+                                stringResource(when (k) { TabSkin.Rect -> R.string.skin_rect; TabSkin.Donut -> R.string.skin_donut; TabSkin.Crown -> R.string.skin_crown; else -> R.string.skin_bear }),
+                                color = if (on) c.text else c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp),
+                            )
+                        }
+                    }
+                }
+            }
+
             // Circle to Search
             SettingsCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {

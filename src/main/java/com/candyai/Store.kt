@@ -68,6 +68,11 @@ object Store {
         get() = sp.getString("last_assist", "") ?: ""
         set(v) { sp.edit().putString("last_assist", v).apply() }
 
+    /** What floating Candy looks like while she is tucked away: rect (default), donut, crown or bear. */
+    var tabSkin: String
+        get() = sp.getString("tab_skin", "rect") ?: "rect"
+        set(v) { sp.edit().putString("tab_skin", v).apply() }
+
     /** "system" (follow the phone, default), "light" or "dark". */
     var themeMode: String
         get() = sp.getString("theme", "system").let { if (it == "light" || it == "dark") it else "system" }
