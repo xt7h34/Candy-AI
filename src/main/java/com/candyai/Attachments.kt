@@ -214,7 +214,7 @@ fun PendingStrip(list: List<Pending>, onRemove: (Pending) -> Unit) {
 
 /** An attachment inside a message bubble: the picture, or the name of the file. */
 @Composable
-fun AttachView(a: AttRef) {
+fun AttachView(a: AttRef, large: Boolean = false) {
     val cs = MaterialTheme.colorScheme
     if (a.kind == "text") {
         Row(
@@ -229,7 +229,7 @@ fun AttachView(a: AttRef) {
         val bmp by produceState<ImageBitmap?>(a.thumb, a.id) {
             if (value == null) value = AttCache.load(a.id)
         }
-        Box(Modifier.size(150.dp).clip(RoundedCornerShape(14.dp)).background(cs.surfaceContainerHighest)) {
+        Box(Modifier.size(if (large) 250.dp else 150.dp).clip(RoundedCornerShape(14.dp)).background(cs.surfaceContainerHighest)) {
             bmp?.let { Image(it, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
         }
     }

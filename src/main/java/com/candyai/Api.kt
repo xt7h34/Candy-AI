@@ -41,11 +41,19 @@ class PollResult(
     val memAdded: List<String>,
     val memRemoved: List<String>,
     val messageId: Long,
+    /** Pictures Candy drew for this reply (empty most of the time). */
+    val atts: List<AttRef> = emptyList(),
 )
 
 class VoiceStatus(val ttsOn: Boolean, val ttsLeft: Int, val ttsLimit: Int, val sttOn: Boolean)
 class MemItem(val id: Long, val text: String)
 class MemState(val items: List<MemItem>, val on: Boolean, val max: Int)
+
+private fun attRefs(arr: org.json.JSONArray?): List<AttRef> {
+    val out = ArrayList<AttRef>()
+    if (arr != null) for (k in 0 until arr.length()) arr.optJSONObject(k)?.let { out.add(AttRef(it.optLong("id"), it.optString("kind"), it.optString("name"))) }
+    return out
+}
 
 private fun memLists(mem: JSONObject?): Pair<List<String>, List<String>> {
     val added = ArrayList<String>()
@@ -196,6 +204,7 @@ object Api {
             memAdded = a,
             memRemoved = r,
             messageId = j.optLong("message_id", 0L),
+            atts = attRefs(j.optJSONArray("attachments")),
         )
     }
 

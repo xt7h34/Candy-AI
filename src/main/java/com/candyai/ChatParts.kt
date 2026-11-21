@@ -216,8 +216,11 @@ internal fun AiBubble(m: AiMsg) {
                     .background(cs.surfaceContainerHigh)
                     .padding(horizontal = 14.dp, vertical = 9.dp),
             ) {
-                SelectionContainer {
-                    Text(aiRich(m.text, boldSpan), color = cs.onSurface, style = MaterialTheme.typography.bodyLarge)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for (a in m.atts) AttachView(a, large = true)
+                    if (m.text.isNotBlank()) SelectionContainer {
+                        Text(aiRich(m.text, boldSpan), color = cs.onSurface, style = MaterialTheme.typography.bodyLarge)
+                    }
                 }
             }
         }

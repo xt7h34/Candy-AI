@@ -234,12 +234,12 @@ fun ChatScreen(
                 if (idx >= 0) {
                     val old = msgs[idx]
                     val text = fin ?: old.text
-                    if (text.isBlank()) {
+                    if (text.isBlank() && p.atts.isEmpty()) {
                         msgs.removeAt(idx)
                     } else {
                         msgs[idx] = AiMsg(
                             if (p.messageId > 0) p.messageId else old.n, "assistant", text,
-                            System.currentTimeMillis(), p.memAdded, p.memRemoved, 0,
+                            System.currentTimeMillis(), p.memAdded, p.memRemoved, 0, p.atts,
                         )
                     }
                     if (p.full) needReload = true
