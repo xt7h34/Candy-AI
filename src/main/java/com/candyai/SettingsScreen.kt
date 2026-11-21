@@ -215,10 +215,6 @@ fun SettingsScreen(
                         LangChip(stringResource(R.string.see_unknown_voice), seeUnknown == "voice", Modifier.weight(1f)) { seeUnknown = "voice"; Store.seeUnknown = "voice" }
                     }
                     Text(stringResource(R.string.see_unknown_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
-                    Text(
-                        stringResource(R.string.see_last_title) + "\n" + Store.lastAssist.ifBlank { stringResource(R.string.see_last_none) },
-                        color = c.subtext, fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp),
-                    )
                     Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         TextButton(onClick = { openAssistantSettings() }) { Text(stringResource(R.string.cts_set_assistant), color = c.userBubble) }
                         TextButton(onClick = { ctx.startActivity(Intent(ctx, EdgeActivity::class.java).putExtra("voice", true)) }) {

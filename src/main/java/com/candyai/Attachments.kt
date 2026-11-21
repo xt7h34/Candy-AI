@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AttachFile
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Fullscreen
+import androidx.compose.material.icons.rounded.Gesture
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material3.DropdownMenu
@@ -171,7 +172,7 @@ object AttCache {
 }
 
 @Composable
-fun AttachMenu(expanded: Boolean, onDismiss: () -> Unit, onCamera: () -> Unit, onGallery: () -> Unit, onFile: () -> Unit, onScreen: (() -> Unit)? = null) {
+fun AttachMenu(expanded: Boolean, onDismiss: () -> Unit, onCamera: () -> Unit, onGallery: () -> Unit, onFile: () -> Unit, onScreen: (() -> Unit)? = null, onCircle: (() -> Unit)? = null) {
     val cs = MaterialTheme.colorScheme
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss, containerColor = cs.surfaceContainerHigh) {
         DropdownMenuItem(
@@ -189,6 +190,13 @@ fun AttachMenu(expanded: Boolean, onDismiss: () -> Unit, onCamera: () -> Unit, o
             leadingIcon = { Icon(Icons.Rounded.AttachFile, null, tint = cs.onSurfaceVariant) },
             onClick = { onDismiss(); onFile() },
         )
+        if (onCircle != null) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.see_circle), color = cs.onSurface) },
+                leadingIcon = { Icon(Icons.Rounded.Gesture, null, tint = cs.onSurfaceVariant) },
+                onClick = { onDismiss(); onCircle() },
+            )
+        }
         if (onScreen != null) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.see_screenshot), color = cs.onSurface) },

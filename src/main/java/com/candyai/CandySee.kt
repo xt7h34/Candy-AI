@@ -256,6 +256,8 @@ fun SeeCapsule(
     startListening: Boolean = false,
     frozen: Boolean = false,
     onTranslateScreen: () -> Unit = {},
+    onClose: () -> Unit = {},
+    onCircle: (() -> Unit)? = null,
 ) {
     val ctx = LocalContext.current
     val cs = MaterialTheme.colorScheme
@@ -347,11 +349,17 @@ fun SeeCapsule(
         }
     }
     /** Screenshot into the attachments. The one the assistant already handed over is used when there is one; otherwise the system asks once. */
-    fun takeScreen(then: (() -> Unit)? = null) {
+    fun takeScreen(then: (() -> Unit)? = null, translate: Boolean = false) {
         if (full()) return
         val held = SeeHolder.shot
         afterShot = then
         if (held != null) { gotShot(held); return }
+        // first choice: Candy's own assistant session hands over a real screenshot, no permission prompt
+        if (EdgeInteractionService.show("shot", if (translate) "translate" else null)) {
+            afterShot = null
+            onClose()
+            return
+        }
         try {
             projection.launch(ctx.getSystemService(MediaProjectionManager::class.java).createScreenCaptureIntent())
         } catch (e: Exception) {
@@ -367,7 +375,7 @@ fun SeeCapsule(
             t.isNotEmpty() -> send(ctx.getString(R.string.see_translate_text) + "\n" + t)
             frozen -> onTranslateScreen()
             chat.pending.any { it.kind == "image" } -> send(ctx.getString(R.string.cts_p_translate))
-            else -> takeScreen { send(ctx.getString(R.string.cts_p_translate)) }
+            else -> takeScreen({ send(ctx.getString(R.string.cts_p_translate)) }, translate = true)
         }
     }
 
@@ -475,6 +483,7 @@ fun SeeCapsule(
                             onGallery = { gallery.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                             onFile = { files.launch(arrayOf("text/*", "application/json", "application/xml", "application/csv")) },
                             onScreen = if (frozen) null else ({ takeScreen() }),
+                            onCircle = if (frozen) null else onCircle,
                         )
                     }
                     Box(Modifier.weight(1f).padding(horizontal = 6.dp, vertical = 10.dp), contentAlignment = Alignment.CenterStart) {

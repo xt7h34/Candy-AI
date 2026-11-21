@@ -40,7 +40,37 @@ class EdgeTileService : TileService() {
 
 // ───── Candy as the phone's digital assistant: choose it in Settings > Default apps > Digital assistant, then long-press the power button ─────
 
-class EdgeInteractionService : VoiceInteractionService()
+class EdgeInteractionService : VoiceInteractionService() {
+    companion object {
+        @Volatile private var inst: EdgeInteractionService? = null
+
+        /**
+         * Candy asks Android for the assistant session herself, with a screenshot and no permission prompt (works while Candy is the chosen assistant).
+         * [mode]: "cts" = Circle to Search, "shot" = back to the panel with the screenshot attached ([then] = "translate" also translates it).
+         * Returns false when Candy is not the active assistant.
+         */
+        fun show(mode: String, then: String? = null): Boolean {
+            val s = inst ?: return false
+            return try {
+                val args = Bundle().apply { putString("candy_mode", mode); if (then != null) putString("candy_then", then) }
+                s.showSession(args, VoiceInteractionSession.SHOW_WITH_ASSIST or VoiceInteractionSession.SHOW_WITH_SCREENSHOT)
+                true
+            } catch (_: Exception) {
+                false
+            }
+        }
+    }
+
+    override fun onReady() {
+        super.onReady()
+        inst = this
+    }
+
+    override fun onShutdown() {
+        if (inst === this) inst = null
+        super.onShutdown()
+    }
+}
 
 class EdgeSessionService : VoiceInteractionSessionService() {
     override fun onNewSession(args: Bundle?): VoiceInteractionSession = EdgeSession(this)
@@ -57,6 +87,8 @@ class EdgeSession(context: Context) : VoiceInteractionSession(context) {
     private val handler = Handler(Looper.getMainLooper())
     private var opened = false
     private var voiceMode = false
+    private var mode = ""      // "cts" / "shot" when Candy asked for the session herself
+    private var then: String? = null
     private val noScreenshot = Runnable { open(voice = false) }
 
     companion object {
@@ -80,10 +112,13 @@ class EdgeSession(context: Context) : VoiceInteractionSession(context) {
         opened = false
         Store.init(context.applicationContext)
         val withShot = showFlags and SHOW_WITH_SCREENSHOT != 0
+        mode = args?.getString("candy_mode") ?: ""
+        then = args?.getString("candy_then")
         val inv = args?.getInt("invocation_type", -1) ?: -1
         val keys = args?.keySet()?.joinToString(",") ?: "-"
         // 6 = power long-press, 5 = home long-press, 1 = corner swipe on stock Android; other phones may differ
         voiceMode = when {
+            mode == "cts" || mode == "shot" -> false
             !Store.ctsOn || !withShot -> true
             inv == 6 -> true
             inv == 5 || inv == 1 -> false
@@ -103,7 +138,16 @@ class EdgeSession(context: Context) : VoiceInteractionSession(context) {
     override fun onHandleScreenshot(screenshot: Bitmap?) {
         handler.removeCallbacks(noScreenshot)
         if (voiceMode) {
-            SeeHolder.shot = screenshot   // kept in memory for the "attach the screen" button
+            SeeHolder.shot = screenshot   // kept in memory for the "+ > screenshot" item
+            return
+        }
+        if (mode == "shot") {
+            if (opened) return
+            SeeHolder.shot = screenshot
+            opened = true
+            startAssistantActivity(
+                Intent(context, EdgeActivity::class.java).putExtra("shot", screenshot != null).putExtra("then", then),
+            )
             return
         }
         if (opened) return

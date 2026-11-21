@@ -106,4 +106,6 @@
     <string name="see_try_voice">جرّب الصوت</string>
     <string name="see_screenshot">لقطة شاشة</string>
     <string name="see_capture_note">كاندي بتاخد لقطة للشاشة</string>
+    <string name="see_circle">دايرة على الشاشة (Circle to Search)</string>
+    <string name="see_need_assistant">اختار كاندي كمساعد رقمي من الإعدادات الأول عشان تستخدم ده</string>
 </resources>

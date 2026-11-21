@@ -104,4 +104,6 @@
     <string name="see_try_voice">Try voice</string>
     <string name="see_screenshot">Screenshot</string>
     <string name="see_capture_note">Candy is taking a screenshot</string>
+    <string name="see_circle">Circle on screen (Circle to Search)</string>
+    <string name="see_need_assistant">Choose Candy as your digital assistant in Settings first</string>
 </resources>

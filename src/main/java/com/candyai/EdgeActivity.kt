@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -64,11 +65,15 @@ class EdgeActivity : ComponentActivity() {
         Store.init(applicationContext)
         ThemeMode.load()
         val voice = intent.getBooleanExtra("voice", false)
+        val autoShot = intent.getBooleanExtra("shot", false)
+        val thenTranslate = intent.getStringExtra("then") == "translate"
         setContent {
             CandyTheme {
                 CompositionLocalProvider(LocalLayoutDirection provides Lang.direction(this@EdgeActivity)) {
                     EdgePanel(
                         voice = voice,
+                        autoShot = autoShot,
+                        thenTranslate = thenTranslate,
                         onClose = { finish() },
                         onOpenFull = { id ->
                             val open = Intent(this@EdgeActivity, MainActivity::class.java)
@@ -85,10 +90,35 @@ class EdgeActivity : ComponentActivity() {
 }
 
 @Composable
-fun EdgePanel(onClose: () -> Unit, onOpenFull: (String?) -> Unit, onReply: (Int) -> Unit = {}, voice: Boolean = false) {
+fun EdgePanel(onClose: () -> Unit, onOpenFull: (String?) -> Unit, onReply: (Int) -> Unit = {}, voice: Boolean = false, autoShot: Boolean = false, thenTranslate: Boolean = false) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val chat = remember { SeeChat(ctx, scope, speakReplies = voice) }
+
+    // came back from "screenshot": the shot is attached (and translated right away if that is what was asked)
+    LaunchedEffect(Unit) {
+        if (autoShot) {
+            val b = SeeHolder.shot
+            val p = if (b != null) AttachKit.fromBitmap(b, "screen.jpg") else null
+            if (p == null) chat.error = ctx.getString(R.string.see_no_screen)
+            else if (thenTranslate) chat.ask(ctx.getString(R.string.cts_p_translate), listOf(p), onReply)
+            else chat.pending.add(p)
+        }
+    }
+
+    // Circle to Search from the panel: the screenshot we already hold, or a fresh one from the assistant session
+    val circle: () -> Unit = {
+        val held = SeeHolder.shot
+        if (held != null) {
+            CtsHolder.shot = held
+            ctx.startActivity(Intent(ctx, CtsActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            onClose()
+        } else if (EdgeInteractionService.show("cts")) {
+            onClose()
+        } else {
+            chat.error = ctx.getString(R.string.see_need_assistant)
+        }
+    }
 
     val noRipple = remember { MutableInteractionSource() }
     Box(
@@ -106,6 +136,8 @@ fun EdgePanel(onClose: () -> Unit, onOpenFull: (String?) -> Unit, onReply: (Int)
             onOpenFull = onOpenFull,
             modifier = Modifier.align(Alignment.BottomCenter),
             startListening = voice,
+            onClose = onClose,
+            onCircle = circle,
         )
     }
 }
