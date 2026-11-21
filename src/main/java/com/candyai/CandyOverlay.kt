@@ -17,6 +17,11 @@ import android.os.Looper
 import android.provider.Settings
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
+import android.view.VelocityTracker
+import android.view.animation.DecelerateInterpolator
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
@@ -30,6 +35,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
@@ -131,7 +147,8 @@ private val PEEK_W = 104.dp
 private val PEEK_H = 144.dp
 private val TAB_W = 28.dp
 private val TAB_H = 56.dp
-private val TAB_WIN_W = 52.dp   // the tab's window is a little wider than the tab so it can grow into a circle
+private val TAB_WIN_W = 64.dp   // the tab's window is bigger than the tab: room to grow into a circle and to squash and stretch
+private val TAB_WIN_H = 64.dp
 private const val FLOAT_DIST_DP = 36f   // pulled this far from the edge, the tab becomes a floating circle
 
 class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, ViewModelStoreOwner {
@@ -156,6 +173,10 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
     private var fx = 0.5f
     private var fy = 0.5f
     private var skin by mutableStateOf(TabSkin.Rect)
+    private var bump by mutableStateOf(0)            // +1 = a little jelly wobble
+    private var pressed by mutableStateOf(false)     // a finger is holding the tab: it lifts a bit
+    private var vt: VelocityTracker? = null
+    private var fling: ValueAnimator? = null
     private var floatLook by mutableStateOf(false)   // what the tab looks like right now (circle or edge tab), also while dragging
 
     private var downX = 0f
@@ -218,6 +239,7 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
 
     override fun onDestroy() {
         CandyOverlay.listener = null
+        fling?.cancel()
         handler.removeCallbacksAndMessages(null)
         root?.let { try { wm.removeView(it) } catch (_: Exception) { } }
         root = null
@@ -281,7 +303,7 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
         val animated = Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
         val frame = FrameLayout(this)
         val compose = ComposeView(this)
-        compose.setContent { CandyTheme { OverlayContent(hidden, edgeLeft, animated, floatLook, skin) } }
+        compose.setContent { CandyTheme { OverlayContent(hidden, edgeLeft, animated, floatLook, skin, bump, pressed) } }
         frame.addView(compose)
         frame.setViewTreeLifecycleOwner(this)
         frame.setViewTreeSavedStateRegistryOwner(this)
@@ -301,7 +323,7 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
         val dm = resources.displayMetrics
         val d = dm.density
         val peekH = (PEEK_H.value * d).toInt()
-        val tabH = (TAB_H.value * d).toInt()
+        val tabH = (TAB_WIN_H.value * d).toInt()
         val w = ((if (hidden) TAB_WIN_W else PEEK_W).value * d).toInt()
         val h = if (hidden) tabH else peekH
         val yMax = (dm.heightPixels - peekH - (48 * d).toInt()).coerceAtLeast(1)
@@ -321,8 +343,12 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
 
     private fun onTouch(v: View, e: MotionEvent): Boolean {
         CandyIdle.touched()
+        if (e.actionMasked == MotionEvent.ACTION_DOWN) { vt?.recycle(); vt = VelocityTracker.obtain() }
+        vt?.addMovement(e)
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                fling?.cancel()
+                pressed = hidden
                 downX = e.rawX
                 downY = e.rawY
                 startX = lp.x
@@ -355,7 +381,14 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
             }
             MotionEvent.ACTION_UP -> {
                 handler.removeCallbacks(longPress)
-                if (moved) {
+                pressed = false
+                if (moved && hidden) {
+                    // thrown: it glides on in the direction of the throw, and sticks to the edge if it gets there
+                    vt?.computeCurrentVelocity(1000)
+                    val vx = vt?.xVelocity ?: 0f
+                    val vy = vt?.yVelocity ?: 0f
+                    if (Math.hypot(vx.toDouble(), vy.toDouble()) > 700 * resources.displayMetrics.density) throwTab(vx, vy) else finishDrag()
+                } else if (moved) {
                     finishDrag()
                 } else if (!longFired) {
                     if (hidden) {
@@ -379,10 +412,39 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
             }
             MotionEvent.ACTION_CANCEL -> {
                 handler.removeCallbacks(longPress)
+                pressed = false
                 if (moved) finishDrag()
             }
         }
         return true
+    }
+
+    private fun throwTab(vx: Float, vy: Float) {
+        val dm = resources.displayMetrics
+        val maxX = (dm.widthPixels - lp.width).coerceAtLeast(0)
+        val maxY = (dm.heightPixels - lp.height).coerceAtLeast(0)
+        val x0 = lp.x
+        val y0 = lp.y
+        val x1 = (x0 + vx * 0.25f).toInt().coerceIn(0, maxX)
+        val y1 = (y0 + vy * 0.25f).toInt().coerceIn(0, maxY)
+        fling?.cancel()
+        var cancelled = false
+        fling = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 420
+            interpolator = DecelerateInterpolator(2f)
+            addUpdateListener {
+                val f = it.animatedValue as Float
+                lp.x = (x0 + (x1 - x0) * f).toInt()
+                lp.y = (y0 + (y1 - y0) * f).toInt()
+                floatLook = minOf(lp.x, maxX - lp.x) > FLOAT_DIST_DP * dm.density   // it turns into the tab as it nears an edge
+                root?.let { r -> try { wm.updateViewLayout(r, lp) } catch (_: Exception) { } }
+            }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationCancel(a: Animator) { cancelled = true }
+                override fun onAnimationEnd(a: Animator) { if (!cancelled) finishDrag() }
+            })
+            start()
+        }
     }
 
     /** Let go after dragging: she snaps to the nearest edge, or tucks away when pushed into the edge she is on. */
@@ -407,6 +469,7 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
             OverlayPrefs.save(this, edgeLeft, yFrac, true)
             OverlayPrefs.saveFloat(this, floating, wasFloating, fx, fy)
             applyLayout()
+            bump++
             return
         }
         val w = lp.width
@@ -465,12 +528,58 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
 }
 
 @Composable
-private fun OverlayContent(hidden: Boolean, left: Boolean, animated: Boolean, circle: Boolean, skin: TabSkin) {
+private fun OverlayContent(hidden: Boolean, left: Boolean, animated: Boolean, circle: Boolean, skin: TabSkin, bump: Int, pressed: Boolean) {
     // her place and shape depend only on the edge she sits on, never on the app language
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-        if (hidden && skin != TabSkin.Rect) {
-            SkinBubble(skin, left, circle, animated)
-        } else if (hidden) {
+        if (hidden) {
+            // jelly: a wobble each time she lands, a small lift while held, and a slow bob while she floats
+            val wobble = remember { Animatable(0f) }
+            LaunchedEffect(bump) {
+                if (bump > 0 && animated) {
+                    wobble.snapTo(1f)
+                    wobble.animateTo(0f, spring(dampingRatio = 0.3f, stiffness = 260f))
+                }
+            }
+            val lift by animateFloatAsState(if (pressed) 1.12f else 1f, label = "lift")
+            // the bob only runs while she floats (a looping animation on the home screen would cost battery for nothing)
+            val bobY = if (circle && animated) {
+                rememberInfiniteTransition(label = "bob").animateFloat(-3f, 3f, infiniteRepeatable(tween(1800, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "bobY")
+            } else null
+            Box(
+                Modifier.graphicsLayer {
+                    scaleX = lift * (1f + 0.22f * wobble.value)
+                    scaleY = lift * (1f - 0.18f * wobble.value)
+                    translationY = (bobY?.value ?: 0f) * density
+                },
+            ) {
+                if (skin != TabSkin.Rect) SkinBubble(skin, left, circle, animated) else TabBubble(left, circle, animated)
+            }
+        } else {
+            CandyPeek(PEEK_W, PEEK_H, animated, 0, 0L, mirror = left)
+        }
+    }
+}
+
+/** The donut, crown or bear: whole and round-ish when floating, and on the edge the donut is half hidden while the crown and bear stay whole (mirrored on the left). */
+@Composable
+private fun SkinBubble(skin: TabSkin, left: Boolean, circle: Boolean, animated: Boolean) {
+    val spec = if (animated) spring<Dp>(dampingRatio = 1f, stiffness = 500f) else snap<Dp>()
+    val half = if (skin == TabSkin.Donut && !circle) 24.dp else 0.dp
+    val shift by animateDpAsState(if (left) -half else half, spec, label = "shift")
+    val size by animateDpAsState(if (circle) 48.dp else 44.dp, spec, label = "size")
+    Box(
+        Modifier.size(TAB_WIN_W, TAB_WIN_H),
+        contentAlignment = if (circle) Alignment.Center else if (left) Alignment.CenterStart else Alignment.CenterEnd,
+    ) {
+        SkinArt(skin, size.coerceAtLeast(1.dp), Modifier.offset(x = shift), mirror = left && !circle && skin == TabSkin.Bear)
+    }
+}
+
+/** The flat tab on the edge, or a round bubble when it is pulled away (it morphs between the two). */
+@Composable
+private fun TabBubble(left: Boolean, circle: Boolean, animated: Boolean) {
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+
             // the tab: flat on the edge, or a round bubble when it is pulled away (it morphs between the two)
             // no overshoot: a corner radius below zero must never happen
             val spec = if (animated) spring<Dp>(dampingRatio = 1f, stiffness = 500f) else snap<Dp>()
@@ -480,7 +589,7 @@ private fun OverlayContent(hidden: Boolean, left: Boolean, animated: Boolean, ci
             val innerR by animateDpAsState(if (circle) 24.dp else 16.dp, spec, label = "ir")
             val face by animateDpAsState(if (circle) 38.dp else 22.dp, spec, label = "face")
             Box(
-                Modifier.size(TAB_WIN_W, TAB_H),
+                Modifier.size(TAB_WIN_W, TAB_WIN_H),
                 contentAlignment = if (circle) Alignment.Center else if (left) Alignment.CenterStart else Alignment.CenterEnd,
             ) {
                 Box(
@@ -501,23 +610,5 @@ private fun OverlayContent(hidden: Boolean, left: Boolean, animated: Boolean, ci
                     )
                 }
             }
-        } else {
-            CandyPeek(PEEK_W, PEEK_H, animated, 0, 0L, mirror = left)
-        }
-    }
-}
-
-/** The donut, crown or bear: whole and round-ish when floating, and on the edge the donut is half hidden while the crown and bear stay whole (mirrored on the left). */
-@Composable
-private fun SkinBubble(skin: TabSkin, left: Boolean, circle: Boolean, animated: Boolean) {
-    val spec = if (animated) spring<Dp>(dampingRatio = 1f, stiffness = 500f) else snap<Dp>()
-    val half = if (skin == TabSkin.Donut && !circle) 24.dp else 0.dp
-    val shift by animateDpAsState(if (left) -half else half, spec, label = "shift")
-    val size by animateDpAsState(if (circle) 48.dp else 44.dp, spec, label = "size")
-    Box(
-        Modifier.size(TAB_WIN_W, TAB_H),
-        contentAlignment = if (circle) Alignment.Center else if (left) Alignment.CenterStart else Alignment.CenterEnd,
-    ) {
-        SkinArt(skin, size.coerceAtLeast(1.dp), Modifier.offset(x = shift), mirror = left && !circle && skin == TabSkin.Bear)
     }
 }

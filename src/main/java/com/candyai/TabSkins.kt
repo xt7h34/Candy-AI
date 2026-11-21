@@ -52,18 +52,18 @@ fun SkinArt(skin: TabSkin, size: Dp, modifier: Modifier = Modifier, mirror: Bool
                 Image(painterResource(R.drawable.candy_ai_avatar), null, contentScale = ContentScale.Crop, modifier = Modifier.size(size * 0.4f).clip(CircleShape))
             }
         }
-        else -> Canvas(
+        TabSkin.Donut -> Canvas(
             modifier.size(size).graphicsLayer {
                 compositingStrategy = CompositingStrategy.Offscreen   // the donut hole is cut out, so it needs its own layer
                 scaleX = if (mirror) -1f else 1f
             },
-        ) {
-            when (skin) {
-                TabSkin.Donut -> drawDonut()
-                TabSkin.Crown -> drawCrown()
-                else -> drawBear()
-            }
-        }
+        ) { drawDonut() }
+        else -> Image(
+            painterResource(if (skin == TabSkin.Crown) R.drawable.skin_crown else R.drawable.skin_bear),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = modifier.size(size).graphicsLayer { scaleX = if (mirror) -1f else 1f },
+        )
     }
 }
 
@@ -85,56 +85,4 @@ private fun DrawScope.drawDonut() {
             drawRoundRect(Color.White, topLeft = Offset((x - 5f) * s, (y - 1.8f) * s), size = Size(10f * s, 3.6f * s), cornerRadius = CornerRadius(1.8f * s))
         }
     }
-}
-
-private fun DrawScope.drawCrown() {
-    val s = size.minDimension / 100f
-    val path = Path().apply {
-        moveTo(16f * s, 80f * s)
-        lineTo(8f * s, 34f * s)
-        lineTo(31f * s, 54f * s)
-        lineTo(50f * s, 20f * s)
-        lineTo(69f * s, 54f * s)
-        lineTo(92f * s, 34f * s)
-        lineTo(84f * s, 80f * s)
-        close()
-    }
-    drawPath(path, Color(0xFF1B1B1B), style = Stroke(10f * s, join = StrokeJoin.Round))
-    drawPath(path, Color(0xFFFFD21F))
-    // shading
-    val shade = Path().apply {
-        moveTo(22f * s, 72f * s); lineTo(18f * s, 50f * s); lineTo(34f * s, 64f * s); close()
-        moveTo(78f * s, 72f * s); lineTo(82f * s, 50f * s); lineTo(66f * s, 64f * s); close()
-    }
-    drawPath(shade, Color(0xFFE5B800))
-    drawLine(Color(0xFF1B1B1B), Offset(18f * s, 80f * s), Offset(82f * s, 80f * s), strokeWidth = 5f * s)
-}
-
-private fun DrawScope.drawBear() {
-    val s = size.minDimension / 100f
-    val fill = Color(0xFFF9ABCF)
-    val line = Color(0xFFEE6BA6)
-    val w = 5f * s
-    fun body(stroke: Boolean) {
-        fun circ(x: Float, y: Float, r: Float) {
-            if (stroke) drawCircle(line, r * s, Offset(x * s, y * s), style = Stroke(w)) else drawCircle(fill, r * s, Offset(x * s, y * s))
-        }
-        // ears, arms, legs, body, head
-        circ(31f, 17f, 9f); circ(69f, 17f, 9f)
-        circ(24f, 60f, 10f); circ(76f, 58f, 10f)
-        circ(35f, 86f, 11f); circ(65f, 86f, 11f)
-        val tl = Offset(28f * s, 42f * s); val sz = Size(44f * s, 46f * s); val cr = CornerRadius(20f * s)
-        if (stroke) drawRoundRect(line, tl, sz, cr, style = Stroke(w)) else drawRoundRect(fill, tl, sz, cr)
-        circ(50f, 32f, 22f)
-    }
-    body(true)
-    body(false)
-    // face
-    drawCircle(Color(0xFF5A2346), 2.6f * s, Offset(41f * s, 31f * s))
-    drawCircle(Color(0xFF5A2346), 2.6f * s, Offset(59f * s, 31f * s))
-    drawOval(line, Offset(44f * s, 36f * s), Size(12f * s, 8f * s))
-    // shine
-    drawOval(Color.White, Offset(38f * s, 14f * s), Size(14f * s, 6f * s))
-    drawOval(Color.White, Offset(31f * s, 56f * s), Size(5f * s, 14f * s))
-    drawOval(Color.White, Offset(28f * s, 84f * s), Size(10f * s, 5f * s))
 }
