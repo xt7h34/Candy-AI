@@ -47,6 +47,17 @@
             </intent-filter>
         </activity>
 
+        <!-- Circle to Search: the frozen screen you draw on. Opened by the assistant gesture, or from Settings to try it. -->
+        <activity
+            android:name=".CtsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CandyAI.Edge"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|keyboardHidden|uiMode|screenLayout"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Candy Edge: Candy peeking from the edge of the phone's screen, over every app -->
         <service
             android:name=".CandyOverlayService"

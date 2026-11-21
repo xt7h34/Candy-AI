@@ -67,4 +67,25 @@
     <string name="attach_fail">Couldn\'t read that file. Try a picture or a text file (txt, md, csv, json).</string>
     <string name="attach_image_limit">You reached today\'s picture limit. Try again tomorrow.</string>
     <string name="attach_max">At most 3 attachments per message.</string>
+    <string name="cts_title">Circle to Search</string>
+    <string name="cts_settings_hint">Draw a circle around anything on your screen and ask Candy about it. It works when you long-press home or the power button (whichever your phone is set to) and Candy is your digital assistant.</string>
+    <string name="cts_keep_title">Screenshot after use</string>
+    <string name="cts_keep_no">Forget it</string>
+    <string name="cts_keep_yes">Save to gallery</string>
+    <string name="cts_keep_hint">The part you circle is sent to Candy and stays in the conversation. You can delete the conversation from the list.</string>
+    <string name="cts_set_assistant">Choose Candy as assistant</string>
+    <string name="cts_try">Try with a picture</string>
+    <string name="cts_setup_hint">\"Use screenshot\" must be on in your phone\'s digital assistant settings, otherwise the normal ask panel opens.</string>
+    <string name="cts_hint">Circle anything</string>
+    <string name="cts_close">Close</string>
+    <string name="cts_open_chat">Open in chat</string>
+    <string name="cts_input_hint">Ask about what is on screen</string>
+    <string name="cts_explain">Explain</string>
+    <string name="cts_translate">Translate</string>
+    <string name="cts_summarize">Summarize</string>
+    <string name="cts_default_prompt">What is this? Explain the area I selected.</string>
+    <string name="cts_p_explain">Explain what is in this picture, simply.</string>
+    <string name="cts_p_translate">Translate any text shown in this picture: if it is English translate it to Arabic, otherwise translate it to English.</string>
+    <string name="cts_p_summarize">Summarize what is in this picture in a few lines.</string>
+    <string name="cts_conv_title">From the screen</string>
 </resources>

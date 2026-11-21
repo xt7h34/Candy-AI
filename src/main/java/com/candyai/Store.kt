@@ -49,6 +49,16 @@ object Store {
         get() = sp.getBoolean("login_done", false)
         set(v) { sp.edit().putBoolean("login_done", v).apply() }
 
+    /** Circle to Search (the assistant gesture opens a frozen screenshot to draw on) is switched on. */
+    var ctsOn: Boolean
+        get() = sp.getBoolean("cts_on", true)
+        set(v) { sp.edit().putBoolean("cts_on", v).apply() }
+
+    /** Keep the screenshot in the gallery (Pictures/Candy) after Circle to Search closes. Default: it is forgotten. */
+    var ctsSave: Boolean
+        get() = sp.getBoolean("cts_save", false)
+        set(v) { sp.edit().putBoolean("cts_save", v).apply() }
+
     /** "system" (follow the phone, default), "light" or "dark". */
     var themeMode: String
         get() = sp.getString("theme", "system").let { if (it == "light" || it == "dark") it else "system" }

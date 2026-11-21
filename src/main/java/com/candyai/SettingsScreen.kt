@@ -3,6 +3,9 @@ package com.candyai
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
@@ -86,6 +89,30 @@ fun SettingsScreen(
     val ctx = LocalContext.current
     var url by remember { mutableStateOf(Store.serverUrl) }
     var overlayOn by remember { mutableStateOf(Store.overlayOn && android.provider.Settings.canDrawOverlays(ctx)) }
+    var ctsOn by remember { mutableStateOf(Store.ctsOn) }
+    var ctsSave by remember { mutableStateOf(Store.ctsSave) }
+
+    // "try with a picture": opens the Circle to Search screen on a picture from the gallery instead of a real screenshot
+    val ctsPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) {
+            ctx.startActivity(Intent(ctx, CtsActivity::class.java).setData(uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+        }
+    }
+
+    fun openAssistantSettings() {
+        val tries = listOf(
+            android.provider.Settings.ACTION_VOICE_INPUT_SETTINGS,
+            android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS,
+            android.provider.Settings.ACTION_SETTINGS,
+        )
+        for (a in tries) {
+            try {
+                ctx.startActivity(Intent(a).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                return
+            } catch (_: Exception) {
+            }
+        }
+    }
 
     fun setOverlay(on: Boolean) {
         if (!on) {
@@ -160,6 +187,32 @@ fun SettingsScreen(
                         Text(stringResource(R.string.overlay_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
                     }
                     Switch(checked = overlayOn, onCheckedChange = { setOverlay(it) }, modifier = Modifier.padding(start = 8.dp))
+                }
+            }
+
+            // Circle to Search
+            SettingsCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.cts_title), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.cts_settings_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+                    }
+                    Switch(checked = ctsOn, onCheckedChange = { ctsOn = it; Store.ctsOn = it }, modifier = Modifier.padding(start = 8.dp))
+                }
+                if (ctsOn) {
+                    Text(stringResource(R.string.cts_keep_title), color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        LangChip(stringResource(R.string.cts_keep_no), !ctsSave, Modifier.weight(1f)) { ctsSave = false; Store.ctsSave = false }
+                        LangChip(stringResource(R.string.cts_keep_yes), ctsSave, Modifier.weight(1f)) { ctsSave = true; Store.ctsSave = true }
+                    }
+                    Text(stringResource(R.string.cts_keep_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                    Text(stringResource(R.string.cts_setup_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                    Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = { openAssistantSettings() }) { Text(stringResource(R.string.cts_set_assistant), color = c.userBubble) }
+                        TextButton(onClick = { ctsPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
+                            Text(stringResource(R.string.cts_try), color = c.userBubble)
+                        }
+                    }
                 }
             }
 

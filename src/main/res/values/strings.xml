@@ -69,4 +69,25 @@
     <string name="attach_fail">مقدرتش أقرا الملف ده. جرّب صورة أو ملف نصي (txt أو md أو csv أو json).</string>
     <string name="attach_image_limit">وصلت للحد اليومي للصور. جرّب بكرة.</string>
     <string name="attach_max">أقصى حد 3 مرفقات في الرسالة.</string>
+    <string name="cts_title">Circle to Search</string>
+    <string name="cts_settings_hint">ارسم دايرة حوالين أي حاجة على شاشتك واسأل كاندي عنها. بتشتغل لما تضغط ضغطة طويلة على الهوم أو الباور (حسب إعدادات موبايلك) وكاندي هي المساعد الرقمي.</string>
+    <string name="cts_keep_title">لقطة الشاشة بعد الاستخدام</string>
+    <string name="cts_keep_no">تتمسح</string>
+    <string name="cts_keep_yes">تتحفظ في المعرض</string>
+    <string name="cts_keep_hint">الجزء اللي بترسم عليه بيتبعت لكاندي وبيفضل في المحادثة. تقدر تمسح المحادثة من القايمة.</string>
+    <string name="cts_set_assistant">اختار كاندي كمساعد</string>
+    <string name="cts_try">جرّب من صورة</string>
+    <string name="cts_setup_hint">لازم يكون خيار «استخدام لقطة الشاشة» شغّال في إعدادات المساعد الرقمي، وإلا هيفتح لوح السؤال العادي.</string>
+    <string name="cts_hint">ارسم دايرة حوالين أي حاجة</string>
+    <string name="cts_close">إغلاق</string>
+    <string name="cts_open_chat">افتح في محادثة</string>
+    <string name="cts_input_hint">اسأل عن اللي على الشاشة</string>
+    <string name="cts_explain">اشرح</string>
+    <string name="cts_translate">ترجم</string>
+    <string name="cts_summarize">لخّص</string>
+    <string name="cts_default_prompt">ده إيه؟ اشرحلي اللي في المنطقة اللي حددتها.</string>
+    <string name="cts_p_explain">اشرحلي اللي في الصورة دي ببساطة.</string>
+    <string name="cts_p_translate">ترجم أي كلام ظاهر في الصورة دي: لو عربي ترجمه للإنجليزي، ولو بلغة تانية ترجمه للعربي.</string>
+    <string name="cts_p_summarize">لخّصلي اللي في الصورة دي في كام سطر.</string>
+    <string name="cts_conv_title">من الشاشة</string>
 </resources>

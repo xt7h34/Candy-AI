@@ -100,23 +100,35 @@ object AttachKit {
             if (scale < 1f) m.postScale(scale, scale)
             val bmp = if (m.isIdentity) decoded else Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, m, true)
 
-            var q = 82
-            var bytes: ByteArray
-            do {
-                val out = ByteArrayOutputStream()
-                bmp.compress(Bitmap.CompressFormat.JPEG, q, out)
-                bytes = out.toByteArray()
-                q -= 15
-            } while (bytes.size > 1_400_000 && q > 30)
-            if (bytes.size > 1_450_000) return@withContext null
-
-            val tw = 256
-            val th = max(1, bmp.height * tw / max(1, bmp.width))
-            val thumb = Bitmap.createScaledBitmap(bmp, tw, th, true).asImageBitmap()
-            Pending("image", "image/jpeg", "photo.jpg", Base64.encodeToString(bytes, Base64.NO_WRAP), thumb)
+            pack(bmp, "photo.jpg")
         } catch (_: Exception) {
             null
         }
+    }
+
+    /** Shrinks a bitmap (e.g. a circled part of the screen) to about 1280px and packs it as JPEG, ready to send. */
+    suspend fun fromBitmap(bmp: Bitmap, name: String = "region.jpg"): Pending? = withContext(Dispatchers.Default) {
+        try { pack(bmp, name) } catch (_: Exception) { null }
+    }
+
+    private fun pack(src: Bitmap, name: String): Pending? {
+        val scale = MAX_SIDE.toFloat() / max(src.width, src.height)
+        val bmp = if (scale < 1f) {
+            Bitmap.createScaledBitmap(src, max(1, (src.width * scale).toInt()), max(1, (src.height * scale).toInt()), true)
+        } else src
+        var q = 82
+        var bytes: ByteArray
+        do {
+            val out = ByteArrayOutputStream()
+            bmp.compress(Bitmap.CompressFormat.JPEG, q, out)
+            bytes = out.toByteArray()
+            q -= 15
+        } while (bytes.size > 1_400_000 && q > 30)
+        if (bytes.size > 1_450_000) return null
+        val tw = 256
+        val th = max(1, bmp.height * tw / max(1, bmp.width))
+        val thumb = Bitmap.createScaledBitmap(bmp, tw, th, true).asImageBitmap()
+        return Pending("image", "image/jpeg", name, Base64.encodeToString(bytes, Base64.NO_WRAP), thumb)
     }
 
     /** Reads a plain-text file (txt, md, csv, json, code...). Anything binary (PDF, Word...) is refused. */
