@@ -24,10 +24,9 @@ object Store {
         get() = sp.getBoolean("overlay_on", false)
         set(v) { sp.edit().putBoolean("overlay_on", v).apply() }
 
-    var serverUrl: String
-        get() = sp.getString("server", null)?.takeIf { it.isNotBlank() }
-            ?: BuildConfig.SERVER_URL.ifBlank { "http://127.0.0.1:8788" }
-        set(v) { sp.edit().putString("server", v).apply() }
+    /** The server address always comes from the build (api-url.txt), so every user is on the same one. */
+    val serverUrl: String
+        get() = BuildConfig.SERVER_URL.ifBlank { "http://127.0.0.1:8788" }
 
     /** The app language: "ar" (default) or "en". Lang reads the same key before Store exists. */
     var language: String

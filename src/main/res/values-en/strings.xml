@@ -119,7 +119,7 @@
     <string name="upd_skip">Skip this version</string>
     <string name="upd_later">Later</string>
     <string name="upd_title">App updates</string>
-    <string name="upd_current">Installed: %1$s (build %2$d)</string>
+    <string name="upd_current">Installed: %1$s</string>
     <string name="upd_checking">Checking...</string>
     <string name="upd_uptodate">You have the latest version.</string>
     <string name="upd_new">New version: %1$s</string>

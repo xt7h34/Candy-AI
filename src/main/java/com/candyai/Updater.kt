@@ -181,7 +181,7 @@ internal object Updater {
                 return UpdateInfo(
                     code = code,
                     name = o.optString("name").ifBlank { tag },
-                    notes = o.optString("body").trim().split(Regex("\\n\\s*\\n(?=الإصدار)")).firstOrNull().orEmpty(),
+                    notes = "",
                     page = o.optString("html_url"),
                     url = url,
                     size = a.optLong("size"),
@@ -346,9 +346,6 @@ internal object UpdateState {
     }
 }
 
-private fun cleanNotes(raw: String): String =
-    raw.replace(Regex("[#*`>]"), "").replace(Regex("\n{3,}"), "\n\n").trim()
-
 private fun megabytes(size: Long): String = String.format("%.1f", size / 1048576.0)
 
 /** The question when the app opens and a newer version is out. */
@@ -375,10 +372,6 @@ internal fun UpdatePrompt() {
             ) {
                 Text(stringResource(R.string.upd_dialog_text, info.name))
                 if (info.size > 0) Text(stringResource(R.string.upd_size, megabytes(info.size)), style = MaterialTheme.typography.bodySmall)
-                if (info.notes.isNotBlank()) {
-                    Text(stringResource(R.string.upd_notes), style = MaterialTheme.typography.labelLarge)
-                    Text(cleanNotes(info.notes), style = MaterialTheme.typography.bodySmall, maxLines = 12)
-                }
                 when (status) {
                     US_DOWNLOADING -> {
                         LinearProgressIndicator(progress = { UpdateState.progress }, modifier = Modifier.fillMaxWidth())
@@ -437,7 +430,7 @@ internal fun UpdateSection() {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.upd_title), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             Text(
-                stringResource(R.string.upd_current, Updater.installedName(context), Updater.installedCode(context)),
+                stringResource(R.string.upd_current, Updater.installedName(context)),
                 style = MaterialTheme.typography.bodyMedium,
             )
             val line = when (status) {
@@ -458,10 +451,6 @@ internal fun UpdateSection() {
                 )
             }
             if (info != null && (status == US_NEW || status == US_DOWNLOADING || status == US_READY)) {
-                if (info.notes.isNotBlank()) {
-                    Text(stringResource(R.string.upd_notes), style = MaterialTheme.typography.labelLarge)
-                    Text(cleanNotes(info.notes), style = MaterialTheme.typography.bodySmall, maxLines = 12)
-                }
                 if (status == US_DOWNLOADING) {
                     LinearProgressIndicator(progress = { UpdateState.progress }, modifier = Modifier.fillMaxWidth())
                     Text(stringResource(R.string.upd_downloading, (UpdateState.progress * 100).toInt()))

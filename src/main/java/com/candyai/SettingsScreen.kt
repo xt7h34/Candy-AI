@@ -87,7 +87,6 @@ fun SettingsScreen(
 ) {
     val c = LocalCandy.current
     val ctx = LocalContext.current
-    var url by remember { mutableStateOf(Store.serverUrl) }
     var overlayOn by remember { mutableStateOf(Store.overlayOn && android.provider.Settings.canDrawOverlays(ctx)) }
     var ctsOn by remember { mutableStateOf(Store.ctsOn) }
     var ctsSave by remember { mutableStateOf(Store.ctsSave) }
@@ -245,37 +244,6 @@ fun SettingsScreen(
             // app updates
             UpdateSection()
 
-            // server
-            SettingsCard {
-                OutlinedTextField(
-                    value = url,
-                    onValueChange = { url = it },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.server_address)) },
-                    textStyle = TextStyle(textDirection = TextDirection.Ltr, color = c.text, fontSize = 15.sp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = c.accent,
-                        unfocusedBorderColor = c.border,
-                        cursorColor = c.accent,
-                        focusedLabelColor = c.subtext,
-                        unfocusedLabelColor = c.subtext,
-                    ),
-                )
-                TextButton(
-                    onClick = {
-                        val clean = url.trim().trimEnd('/')
-                        if (clean.isNotEmpty() && clean != Store.serverUrl) {
-                            Store.serverUrl = clean
-                            Store.token = null // a token from another server is useless
-                            onServerChanged()
-                        }
-                        Toast.makeText(ctx, ctx.getString(R.string.settings_saved), Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.align(Alignment.End),
-                ) { Text(stringResource(R.string.save), color = c.userBubble) }
-            }
             Spacer(Modifier.height(12.dp))
         }
     }
