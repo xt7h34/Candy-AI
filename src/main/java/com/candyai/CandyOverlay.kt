@@ -466,7 +466,8 @@ private fun OverlayContent(hidden: Boolean, left: Boolean, animated: Boolean, ci
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         if (hidden) {
             // the tab: flat on the edge, or a round bubble when it is pulled away (it morphs between the two)
-            val spec = if (animated) spring<Dp>(dampingRatio = 1f, stiffness = 500f)   // no overshoot: a corner radius below zero must never happen else snap<Dp>()
+            // no overshoot: a corner radius below zero must never happen
+            val spec = if (animated) spring<Dp>(dampingRatio = 1f, stiffness = 500f) else snap<Dp>()
             val w by animateDpAsState(if (circle) 48.dp else TAB_W, spec, label = "w")
             val h by animateDpAsState(if (circle) 48.dp else TAB_H, spec, label = "h")
             val edgeR by animateDpAsState(if (circle) 24.dp else 0.dp, spec, label = "er")
