@@ -132,4 +132,6 @@
     <string name="skin_donut">Donut</string>
     <string name="skin_crown">Crown</string>
     <string name="skin_bear">Bear</string>
+    <string name="skin_faces">Faces</string>
+    <string name="skin_faces_hint">Candy\'s face follows how much you talk to her: sad after 3 days of silence, happy when you chat, very happy when you talk a lot in one day.</string>
 </resources>

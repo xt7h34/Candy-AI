@@ -199,21 +199,22 @@ fun SettingsScreen(
                     for (k in TabSkin.values()) {
                         val on = skin == k
                         Column(
-                            Modifier.clip(RoundedCornerShape(14.dp)).clickable { skin = k; Store.tabSkin = k.key }.padding(6.dp),
+                            Modifier.clip(RoundedCornerShape(14.dp)).clickable { skin = k; Store.tabSkin = k.key }.padding(3.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Box(
-                                Modifier.size(64.dp).clip(RoundedCornerShape(14.dp)).background(c.bg)
+                                Modifier.size(56.dp).clip(RoundedCornerShape(14.dp)).background(c.bg)
                                     .border(if (on) 2.5.dp else 1.dp, if (on) c.accent else c.border, RoundedCornerShape(14.dp)),
                                 contentAlignment = Alignment.Center,
-                            ) { SkinArt(k, 44.dp) }
+                            ) { SkinArt(k, 40.dp) }
                             Text(
-                                stringResource(when (k) { TabSkin.Rect -> R.string.skin_rect; TabSkin.Donut -> R.string.skin_donut; TabSkin.Crown -> R.string.skin_crown; else -> R.string.skin_bear }),
+                                stringResource(when (k) { TabSkin.Rect -> R.string.skin_rect; TabSkin.Donut -> R.string.skin_donut; TabSkin.Crown -> R.string.skin_crown; TabSkin.Bear -> R.string.skin_bear; else -> R.string.skin_faces }),
                                 color = if (on) c.text else c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp),
                             )
                         }
                     }
                 }
+                if (skin == TabSkin.Faces) Text(stringResource(R.string.skin_faces_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
             }
 
             // Circle to Search

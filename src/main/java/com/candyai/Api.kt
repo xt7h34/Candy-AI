@@ -170,6 +170,7 @@ object Api {
 
     // ───── replies (streaming) ─────
     suspend fun sendMessage(conversationId: String, text: String, files: List<Pending> = emptyList()): String {
+        Store.recordSend()
         val body = JSONObject().put("text", text)
         if (files.isNotEmpty()) {
             val arr = org.json.JSONArray()

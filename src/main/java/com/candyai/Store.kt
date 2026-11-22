@@ -68,6 +68,15 @@ object Store {
         get() = sp.getString("last_assist", "") ?: ""
         set(v) { sp.edit().putString("last_assist", v).apply() }
 
+    /** When the person sent messages (millis, newest last, the last 40 only): the mood of the face skin is worked out from these. */
+    private var sends: List<Long>
+        get() = (sp.getString("sends", "") ?: "").split(',').mapNotNull { it.toLongOrNull() }
+        set(v) { sp.edit().putString("sends", v.takeLast(40).joinToString(",")).apply() }
+
+    fun recordSend() { sends = sends + System.currentTimeMillis() }
+    val lastSend: Long get() = sends.lastOrNull() ?: 0L
+    fun sendsSince(since: Long): Int = sends.count { it >= since }
+
     /** What floating Candy looks like while she is tucked away: rect (default), donut, crown or bear. */
     var tabSkin: String
         get() = sp.getString("tab_skin", "rect") ?: "rect"

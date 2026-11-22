@@ -31,16 +31,36 @@ import androidx.compose.ui.unit.dp
 
 /** What Candy looks like while she is tucked away (the shape the person picks in Settings). */
 enum class TabSkin(val key: String) {
-    Rect("rect"), Donut("donut"), Crown("crown"), Bear("bear");
+    Rect("rect"), Donut("donut"), Crown("crown"), Bear("bear"), Faces("faces");
 
     companion object {
         fun of(key: String?): TabSkin = values().firstOrNull { it.key == key } ?: Rect
     }
 }
 
+/**
+ * How Candy feels, from how much the person talked to her: 0 sad (nothing for 3 days or more), 1 neutral (a day or more of quiet),
+ * 2 happy (talked today), 3 very happy (6 or more messages in the last 24 hours).
+ */
+object Mood {
+    private const val DAY = 24L * 60 * 60 * 1000
+    fun level(now: Long = System.currentTimeMillis()): Int {
+        val last = Store.lastSend
+        val today = Store.sendsSince(now - DAY)
+        return when {
+            today >= 6 -> 3
+            today >= 1 -> 2
+            last == 0L || now - last < 3 * DAY -> 1
+            else -> 0
+        }
+    }
+}
+
+private val FACES = intArrayOf(R.drawable.skin_face_0, R.drawable.skin_face_1, R.drawable.skin_face_2, R.drawable.skin_face_3)
+
 /** The drawings are all made in a 100 x 100 square, then scaled to the size they are shown at. */
 @Composable
-fun SkinArt(skin: TabSkin, size: Dp, modifier: Modifier = Modifier, mirror: Boolean = false) {
+fun SkinArt(skin: TabSkin, size: Dp, modifier: Modifier = Modifier, mirror: Boolean = false, mood: Int = 2) {
     when (skin) {
         TabSkin.Rect -> {
             // the flat tab with her picture, as a small preview
@@ -58,6 +78,9 @@ fun SkinArt(skin: TabSkin, size: Dp, modifier: Modifier = Modifier, mirror: Bool
                 scaleX = if (mirror) -1f else 1f
             },
         ) { drawDonut() }
+        TabSkin.Faces -> androidx.compose.animation.Crossfade(mood.coerceIn(0, 3), modifier.size(size), label = "mood") { m ->
+            Image(painterResource(FACES[m]), null, contentScale = ContentScale.Fit, modifier = Modifier.size(size))
+        }
         else -> Image(
             painterResource(if (skin == TabSkin.Crown) R.drawable.skin_crown else R.drawable.skin_bear),
             contentDescription = null,

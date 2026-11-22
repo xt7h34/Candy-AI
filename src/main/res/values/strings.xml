@@ -134,4 +134,6 @@
     <string name="skin_donut">دونات</string>
     <string name="skin_crown">تاج</string>
     <string name="skin_bear">دبدوب</string>
+    <string name="skin_faces">وجوه</string>
+    <string name="skin_faces_hint">وجه كاندي بيتغير على حسب كلامك معاها: بيزعل لو غبت 3 أيام، وبيفرح لما تتكلم، وبيبقى فرحان جدًا لو كلمتها كتير في يوم واحد.</string>
 </resources>

@@ -173,6 +173,13 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
     private var fx = 0.5f
     private var fy = 0.5f
     private var skin by mutableStateOf(TabSkin.Rect)
+    private var mood by mutableStateOf(1)
+    private val moodTick = object : Runnable {
+        override fun run() {
+            mood = Mood.level()
+            handler.postDelayed(this, 10 * 60 * 1000L)
+        }
+    }
     private var bump by mutableStateOf(0)            // +1 = a little jelly wobble
     private var pressed by mutableStateOf(false)     // a finger is holding the tab: it lifts a bit
     private var vt: VelocityTracker? = null
@@ -208,6 +215,7 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
         fy = OverlayPrefs.fy(this)
         floatLook = floating
         skin = TabSkin.of(Store.tabSkin)
+        moodTick.run()
         CandyOverlay.listener = { syncVisibility() }
     }
 
@@ -303,7 +311,7 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
         val animated = Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) != 0f
         val frame = FrameLayout(this)
         val compose = ComposeView(this)
-        compose.setContent { CandyTheme { OverlayContent(hidden, edgeLeft, animated, floatLook, skin, bump, pressed) } }
+        compose.setContent { CandyTheme { OverlayContent(hidden, edgeLeft, animated, floatLook, skin, bump, pressed, mood) } }
         frame.addView(compose)
         frame.setViewTreeLifecycleOwner(this)
         frame.setViewTreeSavedStateRegistryOwner(this)
@@ -494,6 +502,7 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
     private fun syncVisibility() {
         val r = root ?: return
         skin = TabSkin.of(Store.tabSkin)   // the shape may have just been changed in Settings
+        mood = Mood.level()
         val show = CandyOverlay.foreground == 0
         r.visibility = if (show) View.VISIBLE else View.GONE
         lp.flags = if (show) {
@@ -528,7 +537,7 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
 }
 
 @Composable
-private fun OverlayContent(hidden: Boolean, left: Boolean, animated: Boolean, circle: Boolean, skin: TabSkin, bump: Int, pressed: Boolean) {
+private fun OverlayContent(hidden: Boolean, left: Boolean, animated: Boolean, circle: Boolean, skin: TabSkin, bump: Int, pressed: Boolean, mood: Int) {
     // her place and shape depend only on the edge she sits on, never on the app language
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         if (hidden) {
@@ -552,7 +561,7 @@ private fun OverlayContent(hidden: Boolean, left: Boolean, animated: Boolean, ci
                     translationY = (bobY?.value ?: 0f) * density
                 },
             ) {
-                if (skin != TabSkin.Rect) SkinBubble(skin, left, circle, animated) else TabBubble(left, circle, animated)
+                if (skin != TabSkin.Rect) SkinBubble(skin, left, circle, animated, mood) else TabBubble(left, circle, animated)
             }
         } else {
             CandyPeek(PEEK_W, PEEK_H, animated, 0, 0L, mirror = left)
@@ -562,16 +571,16 @@ private fun OverlayContent(hidden: Boolean, left: Boolean, animated: Boolean, ci
 
 /** The donut, crown or bear: whole and round-ish when floating, and on the edge the donut is half hidden while the crown and bear stay whole (mirrored on the left). */
 @Composable
-private fun SkinBubble(skin: TabSkin, left: Boolean, circle: Boolean, animated: Boolean) {
+private fun SkinBubble(skin: TabSkin, left: Boolean, circle: Boolean, animated: Boolean, mood: Int) {
     val spec = if (animated) spring<Dp>(dampingRatio = 1f, stiffness = 500f) else snap<Dp>()
-    val half = if (skin == TabSkin.Donut && !circle) 24.dp else 0.dp
+    val half = if ((skin == TabSkin.Donut || skin == TabSkin.Faces) && !circle) 24.dp else 0.dp
     val shift by animateDpAsState(if (left) -half else half, spec, label = "shift")
     val size by animateDpAsState(if (circle) 48.dp else 44.dp, spec, label = "size")
     Box(
         Modifier.size(TAB_WIN_W, TAB_WIN_H),
         contentAlignment = if (circle) Alignment.Center else if (left) Alignment.CenterStart else Alignment.CenterEnd,
     ) {
-        SkinArt(skin, size.coerceAtLeast(1.dp), Modifier.offset(x = shift), mirror = left && !circle && skin == TabSkin.Bear)
+        SkinArt(skin, size.coerceAtLeast(1.dp), Modifier.offset(x = shift), mirror = left && !circle && skin == TabSkin.Bear, mood = mood)
     }
 }
 
