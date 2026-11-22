@@ -203,4 +203,11 @@
     <string name="sugar_reminder_set">Set a reminder</string>
     <string name="sugar_reminder_change">Change</string>
     <string name="sugar_reminder_clear">Clear reminder</string>
+    <string name="picker_next">Next</string>
+    <string name="picker_back">Back</string>
+    <string name="picker_future">Pick a time in the future</string>
+    <string name="battery_title">So reminders arrive on time</string>
+    <string name="battery_body">Some phones close background apps to save battery, so a reminder can be late. Allow Candy to run without battery limits.</string>
+    <string name="battery_allow">Allow</string>
+    <string name="battery_later">Not now</string>
 </resources>

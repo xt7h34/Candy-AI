@@ -31,10 +31,13 @@ object Reminders {
 
     private fun schedule(ctx: Context, id: String, at: Long, title: String) {
         val am = ctx.getSystemService(AlarmManager::class.java) ?: return
+        val pi = pending(ctx, id, title)
         try {
-            // not "exact": needs no special permission and may ring a few minutes late while the phone sleeps, which is fine for a reminder
-            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending(ctx, id, title))
+            // exact to the minute, even in Doze (USE_EXACT_ALARM / SCHEDULE_EXACT_ALARM); if the phone refuses, the closest thing it allows
+            if (Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms()) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+            else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
         } catch (_: Exception) {
+            try { am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi) } catch (_: Exception) { }
         }
     }
 
@@ -73,6 +76,26 @@ object Reminders {
         }
     }
 
+    /** Samsung / Xiaomi and others kill background apps; the person can exempt Candy from battery saving so reminders ring on time. Asked once. */
+    fun needsBatteryHint(ctx: Context): Boolean {
+        if (Build.VERSION.SDK_INT < 23) return false
+        val asked = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("battery_asked", false)
+        val pm = ctx.getSystemService(android.os.PowerManager::class.java)
+        return !asked && pm != null && !pm.isIgnoringBatteryOptimizations(ctx.packageName)
+    }
+
+    @android.annotation.SuppressLint("BatteryLife")
+    fun askBatteryExemption(ctx: Context) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean("battery_asked", true).apply()
+        try {
+            ctx.startActivity(
+                Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, android.net.Uri.parse("package:" + ctx.packageName))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        } catch (_: Exception) {
+        }
+    }
+
     fun channel(ctx: Context) {
         if (Build.VERSION.SDK_INT >= 26) {
             ctx.getSystemService(NotificationManager::class.java)
@@ -92,6 +115,7 @@ object Reminders {
             .setContentTitle(ctx.getString(R.string.sugar_remind_title))
             .setContentText(ctx.getString(R.string.sugar_remind_body, title))
             .setStyle(Notification.BigTextStyle().bigText(ctx.getString(R.string.sugar_remind_body, title)))
+            .setCategory(Notification.CATEGORY_REMINDER)
             .setContentIntent(open)
             .setAutoCancel(true)
             .build()

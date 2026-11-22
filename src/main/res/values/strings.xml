@@ -205,4 +205,11 @@
     <string name="sugar_reminder_set">ضبط تذكير</string>
     <string name="sugar_reminder_change">تغيير</string>
     <string name="sugar_reminder_clear">إلغاء التذكير</string>
+    <string name="picker_next">التالي</string>
+    <string name="picker_back">رجوع</string>
+    <string name="picker_future">اختار وقت لسه جاي</string>
+    <string name="battery_title">عشان التذكير يوصل في ميعاده</string>
+    <string name="battery_body">بعض الموبايلات بتقفل التطبيقات في الخلفية لتوفير البطارية فالتذكير ممكن يتأخر. اسمح لكاندي تشتغل من غير قيود البطارية.</string>
+    <string name="battery_allow">السماح</string>
+    <string name="battery_later">مش دلوقتي</string>
 </resources>

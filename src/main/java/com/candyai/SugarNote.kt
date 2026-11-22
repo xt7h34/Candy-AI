@@ -82,10 +82,8 @@ fun SugarNoteScreen(onBack: () -> Unit, startNew: Boolean = false) {
     var editing by remember { mutableStateOf<Note?>(null) }
     var creating by remember { mutableStateOf(startNew) }
 
-    // Candy found an event in a note and asks when to remind; then a "done" sheet confirms
-    var ask by remember { mutableStateOf<Pair<Note, List<Pair<String, Long>>>?>(null) }
-    var askText by remember { mutableStateOf("") }
-    var done by remember { mutableStateOf<Pair<String, String>?>(null) }
+    // Candy found an event in a note and asks when to remind (card, then a "done" sheet)
+    var ask by remember { mutableStateOf<ReminderAsk?>(null) }
     val analyzed = remember { mutableSetOf<String>() }
     val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
@@ -102,36 +100,16 @@ fun SugarNoteScreen(onBack: () -> Unit, startNew: Boolean = false) {
             error = null
             SugarWidget.save(ctx, list)
             Reminders.sync(ctx, list)
-            // notes Candy has not read yet (new ones, or ones she wrote from the chat): she looks for an upcoming event, once per note
+            // notes Candy has not read yet: she looks for an upcoming event, once per note
             if (ask == null) {
                 for (n in list.filter { !it.analyzed && it.id !in analyzed }.take(4)) {
                     analyzed.add(n.id)
-                    val sg = try { Api.analyzeNote(n.id, nowText()) } catch (_: Exception) { null }
-                    if (sg != null) {
-                        val opts = reminderOptions(ctx, sg)
-                        if (opts.isNotEmpty()) {
-                            askText = ctx.getString(if (sg.time == null) R.string.sugar_ask_no_time else R.string.sugar_ask_time, sg.event.ifBlank { Reminders.title(n.text) }, sg.whenText.ifBlank { sg.day })
-                            ask = n to opts
-                            break
-                        }
-                    }
+                    val a = askFor(ctx, n)
+                    if (a != null) { ask = a; break }
                 }
             }
         } catch (e: Exception) {
             error = errorMessage(ctx, e)
-        }
-    }
-
-    fun setReminder(n: Note, at: Long) {
-        ensureNotifications()
-        scope.launch {
-            try {
-                Api.updateNote(n.id, n.text, n.color, n.pinned, at)
-                done = Reminders.title(n.text) to formatWhen(at)
-            } catch (e: Exception) {
-                error = errorMessage(ctx, e)
-            }
-            reload++
         }
     }
 
@@ -168,29 +146,8 @@ fun SugarNoteScreen(onBack: () -> Unit, startNew: Boolean = false) {
         }
     }
 
-    ask?.let { (n, opts) ->
-        val labels = opts.map { it.first } + listOf(ctx.getString(R.string.sugar_opt_custom), ctx.getString(R.string.sugar_opt_none))
-        AskCard(
-            question = askText,
-            options = labels,
-            onClose = { ask = null },
-            onNext = { i ->
-                ask = null
-                when {
-                    i < opts.size -> setReminder(n, opts[i].second)
-                    i == opts.size -> pickDateTime(ctx, null) { at -> setReminder(n, at) }
-                    else -> Unit
-                }
-            },
-        )
-    }
-
-    done?.let { (title, whenText) ->
-        DoneSheet(
-            title = stringResource(R.string.sugar_done_title),
-            body = stringResource(R.string.sugar_done_body, title, whenText),
-            onDone = { done = null },
-        )
+    ask?.let { a ->
+        NoteReminderFlow(a, onFinished = { ask = null; reload++ })
     }
 
     if (creating || editing != null) {
@@ -312,6 +269,8 @@ private fun NoteEditor(note: Note?, onDismiss: () -> Unit, onSave: (String, Int,
     var color by remember { mutableIntStateOf(note?.color ?: 0) }
     var pinned by remember { mutableStateOf(note?.pinned ?: false) }
     var remindAt by remember { mutableStateOf(note?.remindAt?.takeIf { it > System.currentTimeMillis() }) }
+    var picking by remember { mutableStateOf(false) }
+    if (picking) DateTimePicker(remindAt, onPicked = { remindAt = it; picking = false }, onDismiss = { picking = false })
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -350,7 +309,7 @@ private fun NoteEditor(note: Note?, onDismiss: () -> Unit, onSave: (String, Int,
                     Text("🔔", fontSize = 15.sp)
                     Spacer(Modifier.width(8.dp))
                     Text(remindAt?.let { formatWhen(it) } ?: stringResource(R.string.sugar_reminder), color = NoteInk, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { pickDateTime(ctx, remindAt) { remindAt = it } }) {
+                    TextButton(onClick = { picking = true }) {
                         Text(stringResource(if (remindAt == null) R.string.sugar_reminder_set else R.string.sugar_reminder_change), color = NoteInk, fontWeight = FontWeight.Bold)
                     }
                 }
@@ -363,7 +322,7 @@ private fun NoteEditor(note: Note?, onDismiss: () -> Unit, onSave: (String, Int,
     )
 }
 
-private fun formatWhen(at: Long): String =
+internal fun formatWhen(at: Long): String =
     java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT).format(java.util.Date(at))
 
 /** The phone's local date and time as plain text, so the server can work out what "tomorrow" or "Thursday" means. */
@@ -393,14 +352,73 @@ private fun reminderOptions(ctx: android.content.Context, sg: NoteSuggest): List
     return out.filter { it.second > now }
 }
 
-private fun pickDateTime(ctx: android.content.Context, initial: Long?, onPicked: (Long) -> Unit) {
-    val cal = java.util.Calendar.getInstance()
-    if (initial != null) cal.timeInMillis = initial else cal.add(java.util.Calendar.HOUR_OF_DAY, 1)
-    android.app.DatePickerDialog(ctx, { _, y, m, d ->
-        android.app.TimePickerDialog(ctx, { _, h, min ->
-            cal.set(y, m, d, h, min, 0)
-            cal.set(java.util.Calendar.MILLISECOND, 0)
-            onPicked(cal.timeInMillis)
-        }, cal.get(java.util.Calendar.HOUR_OF_DAY), cal.get(java.util.Calendar.MINUTE), false).show()
-    }, cal.get(java.util.Calendar.YEAR), cal.get(java.util.Calendar.MONTH), cal.get(java.util.Calendar.DAY_OF_MONTH)).show()
+class ReminderAsk(val note: Note, val question: String, val options: List<Pair<String, Long>>)
+
+/** Candy reads a note (once). If it has an upcoming event, returns the question to ask and the reminder times to offer. */
+suspend fun askFor(ctx: android.content.Context, n: Note): ReminderAsk? {
+    val sg = try { Api.analyzeNote(n.id, nowText()) } catch (_: Exception) { null } ?: return null
+    val opts = reminderOptions(ctx, sg)
+    if (opts.isEmpty()) return null
+    val q = ctx.getString(
+        if (sg.time == null) R.string.sugar_ask_no_time else R.string.sugar_ask_time,
+        sg.event.ifBlank { Reminders.title(n.text) }, sg.whenText.ifBlank { sg.day },
+    )
+    return ReminderAsk(n, q, opts)
+}
+
+/** The whole "when should I remind you?" flow: the question card, a custom time if wanted, the "done" sheet, and the battery hint. */
+@Composable
+fun NoteReminderFlow(a: ReminderAsk, onFinished: () -> Unit) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var stage by remember { mutableIntStateOf(0) }   // 0 question, 1 custom time, 2 done, 3 battery hint
+    var doneText by remember { mutableStateOf("") }
+    val notifPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    fun set(at: Long) {
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        scope.launch {
+            try {
+                Api.updateNote(a.note.id, a.note.text, a.note.color, a.note.pinned, at)
+                try { Reminders.sync(ctx, Api.notes()) } catch (_: Exception) { }
+                doneText = ctx.getString(R.string.sugar_done_body, Reminders.title(a.note.text), formatWhen(at))
+                stage = 2
+            } catch (_: Exception) {
+                onFinished()
+            }
+        }
+    }
+
+    when (stage) {
+        0 -> {
+            val labels = a.options.map { it.first } + listOf(ctx.getString(R.string.sugar_opt_custom), ctx.getString(R.string.sugar_opt_none))
+            AskCard(
+                question = a.question, options = labels, onClose = onFinished,
+                onNext = { i ->
+                    when {
+                        i < a.options.size -> set(a.options[i].second)
+                        i == a.options.size -> stage = 1
+                        else -> onFinished()
+                    }
+                },
+            )
+        }
+        1 -> DateTimePicker(null, onPicked = { set(it) }, onDismiss = onFinished)
+        2 -> DoneSheet(
+            title = stringResource(R.string.sugar_done_title), body = doneText,
+            onDone = { if (Reminders.needsBatteryHint(ctx)) stage = 3 else onFinished() },
+        )
+        else -> androidx.compose.material3.AlertDialog(
+            onDismissRequest = onFinished,
+            containerColor = androidx.compose.ui.graphics.Color.White,
+            title = { Text(stringResource(R.string.battery_title), color = NoteInk) },
+            text = { Text(stringResource(R.string.battery_body), color = NoteInk.copy(alpha = 0.75f)) },
+            confirmButton = {
+                TextButton(onClick = { Reminders.askBatteryExemption(ctx); onFinished() }) { Text(stringResource(R.string.battery_allow), color = LocalCandy.current.userBubble, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = { TextButton(onClick = onFinished) { Text(stringResource(R.string.battery_later), color = NoteInk.copy(alpha = 0.7f)) } },
+        )
+    }
 }

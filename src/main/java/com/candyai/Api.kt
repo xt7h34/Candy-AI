@@ -35,6 +35,8 @@ class AiMsg(
     /** 1 = liked, -1 = disliked, 0 = nothing. */
     val react: Int = 0,
     val atts: List<AttRef> = emptyList(),
+    /** Ids of SugarNote notes Candy wrote in this reply. */
+    val notes: List<String> = emptyList(),
 ) {
     val mine: Boolean get() = role == "user"
     fun withReact(v: Int) = AiMsg(n, role, text, at, memAdded, memRemoved, v, atts)
@@ -305,6 +307,7 @@ object Api {
             memRemoved = r,
             messageId = j.optLong("message_id", 0L),
             atts = attRefs(j.optJSONArray("attachments")),
+            notes = j.optJSONArray("notes")?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList(),
         )
     }
 
