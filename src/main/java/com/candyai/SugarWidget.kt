@@ -55,29 +55,57 @@ class SugarWidget : AppWidgetProvider() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+        private val SLOT = intArrayOf(R.id.sw_n1, R.id.sw_n2, R.id.sw_n3, R.id.sw_n4, R.id.sw_n5, R.id.sw_n6)
+        private val TEXT = intArrayOf(R.id.sw_t1, R.id.sw_t2, R.id.sw_t3, R.id.sw_t4, R.id.sw_t5, R.id.sw_t6)
+        private val PIN = intArrayOf(R.id.sw_p1, R.id.sw_p2, R.id.sw_p3, R.id.sw_p4, R.id.sw_p5, R.id.sw_p6)
+        private val ROW = intArrayOf(R.id.sw_row1, R.id.sw_row2, R.id.sw_row3)
+        private val BG = intArrayOf(
+            R.drawable.note_bg_0, R.drawable.note_bg_1, R.drawable.note_bg_2, R.drawable.note_bg_3,
+            R.drawable.note_bg_4, R.drawable.note_bg_5, R.drawable.note_bg_6, R.drawable.note_bg_7,
+        )
+        private val PINS = intArrayOf(
+            R.drawable.pin_0, R.drawable.pin_1, R.drawable.pin_2, R.drawable.pin_3,
+            R.drawable.pin_4, R.drawable.pin_5, R.drawable.pin_6, R.drawable.pin_7,
+        )
+
         private fun render(ctx: Context, m: AppWidgetManager, ids: IntArray) {
             val cached = try {
                 JSONArray(ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, "[]"))
             } catch (_: Exception) {
                 JSONArray()
             }
-            val slots = intArrayOf(R.id.sw_n1, R.id.sw_n2, R.id.sw_n3, R.id.sw_n4)
-            val bgs = intArrayOf(
-                R.drawable.note_bg_0, R.drawable.note_bg_1, R.drawable.note_bg_2, R.drawable.note_bg_3,
-                R.drawable.note_bg_4, R.drawable.note_bg_5, R.drawable.note_bg_6, R.drawable.note_bg_7,
-            )
             for (id in ids) {
+                // how many cards fit: one or two columns and one to three rows, by the size the person gave the widget
+                val o = m.getAppWidgetOptions(id)
+                val w = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 180)
+                val h = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 180)
+                val cols = if (w >= 150) 2 else 1
+                val rows = ((h - 30) / 85).coerceIn(1, 3)
                 val v = RemoteViews(ctx.packageName, R.layout.sugar_widget)
-                for ((i, slot) in slots.withIndex()) {
-                    val o = cached.optJSONObject(i)
-                    if (o == null) {
-                        v.setViewVisibility(slot, android.view.View.INVISIBLE)
-                    } else {
-                        v.setViewVisibility(slot, android.view.View.VISIBLE)
-                        v.setTextViewText(slot, o.optString("text"))
-                        v.setInt(slot, "setBackgroundResource", bgs[((o.optInt("color") % 8) + 8) % 8])
-                        v.setFloat(slot, "setRotation", noteTilt(o.optString("id")))
-                        v.setOnClickPendingIntent(slot, open(ctx, "list", 10 + i))
+                var next = 0
+                for (r in 0 until 3) {
+                    if (r >= rows) { v.setViewVisibility(ROW[r], android.view.View.GONE); continue }
+                    v.setViewVisibility(ROW[r], android.view.View.VISIBLE)
+                    for (c in 0 until 2) {
+                        val slot = r * 2 + c
+                        if (c >= cols) { v.setViewVisibility(SLOT[slot], android.view.View.GONE); continue }
+                        val n = cached.optJSONObject(next++)
+                        if (n == null) {
+                            v.setViewVisibility(SLOT[slot], android.view.View.INVISIBLE)
+                            continue
+                        }
+                        val text = n.optString("text")
+                        val title = text.substringBefore('\n').length
+                        val styled = android.text.SpannableString(text).apply {
+                            setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, title, 0)
+                        }
+                        val color = ((n.optInt("color") % 8) + 8) % 8
+                        v.setViewVisibility(SLOT[slot], android.view.View.VISIBLE)
+                        v.setTextViewText(TEXT[slot], styled)
+                        v.setInt(TEXT[slot], "setBackgroundResource", BG[color])
+                        v.setImageViewResource(PIN[slot], PINS[color])
+                        v.setFloat(SLOT[slot], "setRotation", noteTilt(n.optString("id")))
+                        v.setOnClickPendingIntent(SLOT[slot], open(ctx, "list", 10 + slot))
                     }
                 }
                 v.setOnClickPendingIntent(R.id.sw_add, open(ctx, "new", 20))
@@ -85,5 +113,10 @@ class SugarWidget : AppWidgetProvider() {
                 m.updateAppWidget(id, v)
             }
         }
+    }
+
+    // resized by the person: show as many cards as now fit
+    override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, appWidgetId: Int, newOptions: android.os.Bundle?) {
+        render(context, manager, intArrayOf(appWidgetId))
     }
 }

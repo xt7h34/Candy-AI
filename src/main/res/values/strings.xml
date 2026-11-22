@@ -155,7 +155,7 @@
     <string name="project_delete_body">المشروع هيتحذف، لكن محادثاته هتفضل موجودة.</string>
     <string name="project_instr_label">التعليمات</string>
     <string name="project_no_instr">مفيش تعليمات</string>
-    <string name="notella">Notella</string>
+    <string name="notella">نوتيلا</string>
     <string name="notella_new">دفتر جديد</string>
     <string name="notella_edit">تعديل الدفتر</string>
     <string name="notella_name">اسم الدفتر</string>
@@ -175,12 +175,12 @@
     <string name="notella_delete_title">حذف الدفتر؟</string>
     <string name="notella_delete_body">الدفتر ومصادره ومحادثاته هيتحذفوا.</string>
     <string name="notella_source_delete">حذف المصدر</string>
-    <string name="sugar">SugarNote</string>
+    <string name="sugar">شوقر نوت</string>
     <string name="sugar_new">ملاحظة جديدة</string>
     <string name="sugar_edit">تعديل الملاحظة</string>
     <string name="sugar_hint">اكتب ملاحظتك…</string>
     <string name="sugar_empty">مفيش ملاحظات لسه. دوس + أو قول لكاندي «سجّلي ملاحظة…»</string>
     <string name="sugar_pin">تثبيت</string>
     <string name="sugar_too_many">وصلت للحد الأقصى من الملاحظات.</string>
-    <string name="sugar_widget_desc">آخر ملاحظاتك من SugarNote على الشاشة الرئيسية</string>
+    <string name="sugar_widget_desc">آخر ملاحظاتك من شوقر نوت على الشاشة الرئيسية</string>
 </resources>

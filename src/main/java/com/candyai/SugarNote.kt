@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -107,16 +108,18 @@ fun SugarNoteScreen(onBack: () -> Unit, startNew: Boolean = false) {
             }
             list == null -> Box(Modifier.fillMaxSize()) { CircularProgressIndicator(Modifier.align(Alignment.Center).size(28.dp), color = c.accent, strokeWidth = 3.dp) }
             list.isEmpty() -> Text(stringResource(R.string.sugar_empty), color = c.subtext, fontSize = 14.sp, modifier = Modifier.fillMaxWidth().padding(32.dp))
-            else -> Row(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                // two columns, notes dealt out one by one (newest / pinned first), so heights stagger like paper on a board
-                for (col in 0..1) {
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        list.filterIndexed { i, _ -> i % 2 == col }.forEach { n -> NoteCard(n) { editing = n } }
+            else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 6.dp)) {
+                // cards zig-zag left and right, joined by dashed curves, like notes pinned on a board
+                list.forEachIndexed { i, n ->
+                    val left = i % 2 == 0
+                    Row(Modifier.fillMaxWidth()) {
+                        if (!left) Spacer(Modifier.weight(0.2f))
+                        Box(Modifier.weight(0.8f)) { NoteCard(n, i + 1) { editing = n } }
+                        if (left) Spacer(Modifier.weight(0.2f))
                     }
+                    if (i < list.lastIndex) NoteConnector(fromLeft = left)
                 }
+                Spacer(Modifier.height(24.dp))
             }
         }
     }
@@ -150,27 +153,80 @@ fun SugarNoteScreen(onBack: () -> Unit, startNew: Boolean = false) {
     }
 }
 
+/** The pin colours that go with the paper colours. */
+private val PinColors = listOf(
+    Color(0xFFF5B700), Color(0xFFFF5C8A), Color(0xFF4D8DF7), Color(0xFF3DBE6E),
+    Color(0xFFFF8A3D), Color(0xFF8B5CF6), Color(0xFF14B8A6), Color(0xFFFF6B5A),
+)
+
+private fun pinColor(i: Int): Color = PinColors[((i % PinColors.size) + PinColors.size) % PinColors.size]
+
 @Composable
-private fun NoteCard(n: Note, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(6.dp)
-    Box(
-        Modifier.fillMaxWidth()
-            .graphicsLayer { rotationZ = noteTilt(n.id) }
-            .shadow(if (n.pinned) 8.dp else 3.dp, shape)
-            .clip(shape)
-            .background(noteColor(n.color))
-            .clickable(onClick = onClick),
-    ) {
-        Column(Modifier.padding(start = 12.dp, end = 12.dp, top = if (n.pinned) 22.dp else 14.dp, bottom = 14.dp)) {
-            Text(
-                n.text, color = NoteInk, fontSize = 14.sp, lineHeight = 20.sp, maxLines = 10, overflow = TextOverflow.Ellipsis,
-                style = TextStyle(textDirection = TextDirection.Content),
-            )
+private fun NoteConnector(fromLeft: Boolean) {
+    androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(34.dp)) {
+        val a = size.width * (if (fromLeft) 0.4f else 0.6f)
+        val b = size.width * (if (fromLeft) 0.6f else 0.4f)
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(a, 0f)
+            cubicTo(a, size.height * 0.85f, b, size.height * 0.15f, b, size.height)
         }
-        if (n.pinned) {
-            // the pin
-            Box(Modifier.align(Alignment.TopCenter).padding(top = 6.dp).size(11.dp).shadow(2.dp, CircleShape).clip(CircleShape).background(Color(0xFFE5384F)))
+        drawPath(
+            path, Color(0x66888888),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                width = 1.5.dp.toPx(),
+                pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f)),
+            ),
+        )
+    }
+}
+
+@Composable
+private fun NoteCard(n: Note, number: Int, onClick: () -> Unit) {
+    val outer = RoundedCornerShape(22.dp)
+    val pin = pinColor(n.color)
+    val title = n.text.substringBefore('\n').trim()
+    val body = n.text.substringAfter('\n', "").trim()
+    Box(Modifier.fillMaxWidth().graphicsLayer { rotationZ = noteTilt(n.id) * 1.6f }.padding(top = 9.dp)) {
+        Box(
+            Modifier.fillMaxWidth()
+                .shadow(if (n.pinned) 14.dp else 8.dp, outer, ambientColor = Color(0x33000000), spotColor = Color(0x33000000))
+                .clip(outer)
+                .background(Color.White)
+                .clickable(onClick = onClick)
+                .padding(10.dp),
+        ) {
+            Column(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp)).background(noteColor(n.color).copy(alpha = 0.6f)).padding(start = 14.dp, end = 14.dp, top = 18.dp, bottom = 14.dp),
+            ) {
+                Text("%02d".format(number), color = pin, fontSize = 15.sp, fontWeight = FontWeight.Medium, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    title, color = NoteInk, fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis,
+                    style = TextStyle(textDirection = TextDirection.Content),
+                )
+                if (body.isNotEmpty()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        body, color = NoteInk.copy(alpha = 0.62f), fontSize = 13.sp, lineHeight = 19.sp, maxLines = 6, overflow = TextOverflow.Ellipsis,
+                        style = TextStyle(textDirection = TextDirection.Content),
+                    )
+                }
+            }
+            if (n.pinned) Text("★", color = pin, fontSize = 14.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 8.dp))
         }
+        // the glossy pin
+        Box(
+            Modifier.align(Alignment.TopCenter).offset(y = (-3).dp).size(20.dp)
+                .shadow(5.dp, CircleShape, ambientColor = pin, spotColor = pin)
+                .clip(CircleShape)
+                .background(
+                    androidx.compose.ui.graphics.Brush.radialGradient(
+                        colors = listOf(Color.White.copy(alpha = 0.85f), pin, pin.copy(alpha = 0.75f)),
+                        center = androidx.compose.ui.geometry.Offset(18f, 14f),
+                        radius = 46f,
+                    ),
+                ),
+        )
     }
 }
 

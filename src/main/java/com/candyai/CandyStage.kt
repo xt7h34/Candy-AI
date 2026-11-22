@@ -333,12 +333,13 @@ internal fun CandyStage(animated: Boolean, talkTick: Int, talkMs: Long, lastActi
                         )
                     }
                     if (mood == Mood.Asleep) {
-                        Text(
-                            "z z Z",
-                            color = cs.primary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = (side.value * 0.04f).sp,
-                            modifier = Modifier.offset(x = side * 0.70f, y = side * 0.16f).graphicsLayer { alpha = zAlpha.value },
+                        Image(
+                            painter = painterResource(R.drawable.z_sleep),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .offset(x = side * 0.70f, y = side * 0.12f)
+                                .requiredSize(side * 0.09f, side * 0.09f / 0.586f)
+                                .graphicsLayer { alpha = zAlpha.value },
                         )
                     }
                 }

@@ -442,14 +442,13 @@ internal fun CandyPeek(width: Dp, height: Dp, animated: Boolean, talkTick: Int, 
             }
         }
         if (mood == Mood.Asleep) {
-            Text(
-                "z z",
-                color = cs.primary,
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
+            Image(
+                painter = painterResource(R.drawable.z_sleep),
+                contentDescription = null,
                 modifier = Modifier
                     .align(if (mirror) Alignment.TopEnd else Alignment.TopStart)
-                    .padding(top = 8.dp, start = 26.dp, end = 26.dp),
+                    .padding(top = 6.dp, start = 26.dp, end = 26.dp)
+                    .requiredSize(16.dp, 27.dp),
             )
         }
     }
