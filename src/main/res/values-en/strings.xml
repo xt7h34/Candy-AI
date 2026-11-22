@@ -153,4 +153,24 @@
     <string name="project_delete_body">The project is deleted, but its chats stay.</string>
     <string name="project_instr_label">Instructions</string>
     <string name="project_no_instr">No instructions</string>
+    <string name="notella">Notella</string>
+    <string name="notella_new">New notebook</string>
+    <string name="notella_edit">Edit notebook</string>
+    <string name="notella_name">Notebook name</string>
+    <string name="notella_empty">No notebooks yet. Create one, add your files, and Candy will answer from your sources only.</string>
+    <string name="notella_counts">%1$d sources · %2$d chats</string>
+    <string name="notella_sources">Sources</string>
+    <string name="notella_no_sources">No sources yet. Add a file or paste text.</string>
+    <string name="notella_add_file">File</string>
+    <string name="notella_add_text">Paste text</string>
+    <string name="notella_paste_title">Add text as a source</string>
+    <string name="notella_paste_name">Source name</string>
+    <string name="notella_paste_body">Paste the text here</string>
+    <string name="notella_chats">Notebook chats</string>
+    <string name="notella_chat">Ask Candy about this notebook</string>
+    <string name="notella_adding">Preparing the source…</string>
+    <string name="notella_too_many">This notebook reached the maximum number of sources.</string>
+    <string name="notella_delete_title">Delete this notebook?</string>
+    <string name="notella_delete_body">The notebook, its sources and its chats will be deleted.</string>
+    <string name="notella_source_delete">Delete source</string>
 </resources>

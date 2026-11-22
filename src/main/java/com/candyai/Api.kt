@@ -11,7 +11,11 @@ import java.security.SecureRandom
 
 class ApiException(val code: String, val status: Int) : Exception(code)
 
-data class Conversation(val id: String, val title: String, val updatedAt: Long, val pinned: Boolean = false, val projectId: String? = null)
+data class Conversation(val id: String, val title: String, val updatedAt: Long, val pinned: Boolean = false, val projectId: String? = null, val notebookId: String? = null)
+
+data class Notebook(val id: String, val name: String, val color: Int, val sources: Int, val chats: Int)
+
+data class Source(val id: String, val name: String, val chars: Int)
 
 data class Project(val id: String, val name: String, val color: Int, val instructions: String, val count: Int, val updatedAt: Long)
 
@@ -141,15 +145,51 @@ object Api {
         val arr = json("GET", "/conversations").getJSONArray("conversations")
         return (0 until arr.length()).map {
             val o = arr.getJSONObject(it)
-            Conversation(o.getString("id"), o.getString("title"), o.getLong("updated_at"), o.optInt("pinned", 0) == 1, if (o.isNull("project_id")) null else o.optString("project_id"))
+            Conversation(o.getString("id"), o.getString("title"), o.getLong("updated_at"), o.optInt("pinned", 0) == 1, if (o.isNull("project_id")) null else o.optString("project_id"), if (o.isNull("notebook_id")) null else o.optString("notebook_id"))
         }
     }
 
-    suspend fun createConversation(projectId: String? = null): String {
+    suspend fun createConversation(projectId: String? = null, notebookId: String? = null): String {
         val body = JSONObject()
         if (projectId != null) body.put("project_id", projectId)
+        if (notebookId != null) body.put("notebook_id", notebookId)
         return json("POST", "/conversations", body).getString("id")
     }
+
+    // ───── Notella ─────
+    suspend fun notebooks(): List<Notebook> {
+        val arr = json("GET", "/notebooks").getJSONArray("notebooks")
+        return (0 until arr.length()).map {
+            val o = arr.getJSONObject(it)
+            Notebook(o.getString("id"), o.getString("name"), o.optInt("color", 0), o.optInt("sources", 0), o.optInt("chats", 0))
+        }
+    }
+
+    suspend fun createNotebook(name: String, color: Int): String =
+        json("POST", "/notebooks", JSONObject().put("name", name).put("color", color)).getString("id")
+
+    suspend fun updateNotebook(id: String, name: String, color: Int) {
+        json("POST", "/notebooks/$id", JSONObject().put("name", name).put("color", color))
+    }
+
+    suspend fun deleteNotebook(id: String) { json("DELETE", "/notebooks/$id") }
+
+    suspend fun sources(notebookId: String): List<Source> {
+        val arr = json("GET", "/notebooks/$notebookId/sources").getJSONArray("sources")
+        return (0 until arr.length()).map {
+            val o = arr.getJSONObject(it)
+            Source(o.getString("id"), o.getString("name"), o.optInt("chars", 0))
+        }
+    }
+
+    /** A file (base64) or pasted text becomes a source; the server extracts and indexes it, which can take a while for big files. */
+    suspend fun addSource(notebookId: String, name: String, b64: String? = null, text: String? = null) {
+        val body = JSONObject().put("name", name)
+        if (b64 != null) body.put("data", b64) else body.put("text", text ?: "")
+        json("POST", "/notebooks/$notebookId/sources", body, readTimeoutMs = 240000)
+    }
+
+    suspend fun deleteSource(id: String) { json("DELETE", "/sources/$id") }
 
     // ───── projects ─────
     suspend fun projects(): List<Project> {
@@ -287,6 +327,7 @@ fun errorMessage(ctx: Context, e: Throwable): String = when {
     e is ApiException && e.code == "stt_empty" -> ctx.getString(R.string.ai_stt_empty)
     e is ApiException && e.code == "unsupported_file" -> ctx.getString(R.string.attach_unsupported)
     e is ApiException && e.code == "empty_doc" -> ctx.getString(R.string.attach_empty)
+    e is ApiException && e.code == "too_many_sources" -> ctx.getString(R.string.notella_too_many)
     e is ApiException && e.code == "image_limit" -> ctx.getString(R.string.attach_image_limit)
     e is ApiException && (e.code == "bad_attachment" || e.code == "attachment_too_large" || e.code == "too_many_attachments" || e.status == 413) -> ctx.getString(R.string.attach_fail)
     e is ApiException && e.code == "not_found" -> ctx.getString(R.string.ai_voice_gone)

@@ -155,4 +155,24 @@
     <string name="project_delete_body">المشروع هيتحذف، لكن محادثاته هتفضل موجودة.</string>
     <string name="project_instr_label">التعليمات</string>
     <string name="project_no_instr">مفيش تعليمات</string>
+    <string name="notella">Notella</string>
+    <string name="notella_new">دفتر جديد</string>
+    <string name="notella_edit">تعديل الدفتر</string>
+    <string name="notella_name">اسم الدفتر</string>
+    <string name="notella_empty">مفيش دفاتر لسه. اعمل دفتر وحط فيه ملفاتك، وكاندي هتجاوب من مصادرك بس.</string>
+    <string name="notella_counts">%1$d مصدر · %2$d محادثة</string>
+    <string name="notella_sources">المصادر</string>
+    <string name="notella_no_sources">مفيش مصادر لسه. ضيف ملف أو الصق نص.</string>
+    <string name="notella_add_file">ملف</string>
+    <string name="notella_add_text">لصق نص</string>
+    <string name="notella_paste_title">إضافة نص كمصدر</string>
+    <string name="notella_paste_name">اسم المصدر</string>
+    <string name="notella_paste_body">الصق النص هنا</string>
+    <string name="notella_chats">محادثات الدفتر</string>
+    <string name="notella_chat">اسألي كاندي عن الدفتر</string>
+    <string name="notella_adding">بجهّز المصدر…</string>
+    <string name="notella_too_many">وصلت للحد الأقصى من المصادر في الدفتر الواحد.</string>
+    <string name="notella_delete_title">حذف الدفتر؟</string>
+    <string name="notella_delete_body">الدفتر ومصادره ومحادثاته هيتحذفوا.</string>
+    <string name="notella_source_delete">حذف المصدر</string>
 </resources>

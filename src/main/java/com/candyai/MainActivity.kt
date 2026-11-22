@@ -138,6 +138,8 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
     var startId by rememberSaveable { mutableStateOf<String?>(null) }
     var startProject by rememberSaveable { mutableStateOf<String?>(null) }
     var projectsOpen by rememberSaveable { mutableStateOf(false) }
+    var startNotebook by rememberSaveable { mutableStateOf<String?>(null) }
+    var notellaOpen by rememberSaveable { mutableStateOf(false) }
     var activeId by rememberSaveable { mutableStateOf<String?>(null) }
     var chatKey by remember { mutableIntStateOf(0) }
     var listKey by remember { mutableIntStateOf(0) }
@@ -146,9 +148,11 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
     var side by remember { mutableStateOf(Store.drawerSide) }
     var sendSide by remember { mutableStateOf(Store.sendSide) }
 
-    fun openChat(id: String?, project: String? = null) {
+    fun openChat(id: String?, project: String? = null, notebook: String? = null) {
         startProject = project
+        startNotebook = notebook
         projectsOpen = false
+        notellaOpen = false
         startId = id
         activeId = id
         chatKey++
@@ -183,6 +187,10 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
                                 // already on an empty chat: just close the drawer
                                 if (activeId == null) scope.launch { drawerState.close() } else openChat(null)
                             },
+                            onNotella = {
+                                notellaOpen = true
+                                scope.launch { drawerState.close() }
+                            },
                             onProjects = {
                                 projectsOpen = true
                                 scope.launch { drawerState.close() }
@@ -202,6 +210,7 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
                             ChatScreen(
                                 startId = startId,
                                 projectId = startProject,
+                                notebookId = startNotebook,
                                 menuOnLeft = side == "left",
                                 sendOnLeft = sendSide == "left",
                                 onMenu = { scope.launch { drawerState.open() } },
@@ -242,6 +251,13 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
                 onBack = { projectsOpen = false },
                 onOpenChat = { openChat(it) },
                 onNewChat = { openChat(null, it) },
+            )
+        }
+        if (notellaOpen) {
+            NotellaScreen(
+                onBack = { notellaOpen = false },
+                onOpenChat = { openChat(it) },
+                onNewChat = { openChat(null, null, it) },
             )
         }
         if (memoryOpen) {

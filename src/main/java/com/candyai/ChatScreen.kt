@@ -136,6 +136,7 @@ import org.json.JSONObject
 fun ChatScreen(
     startId: String?,
     projectId: String? = null,
+    notebookId: String? = null,
     menuOnLeft: Boolean,
     sendOnLeft: Boolean,
     onMenu: () -> Unit,
@@ -295,7 +296,7 @@ fun ChatScreen(
         scope.launch {
             var sent = false
             try {
-                val cid = convId ?: Api.createConversation(projectId).also { convId = it; onConversation(it) }
+                val cid = convId ?: Api.createConversation(projectId, notebookId).also { convId = it; onConversation(it) }
                 val job = Api.sendMessage(cid, text, files)
                 sent = true
                 msgs.add(
