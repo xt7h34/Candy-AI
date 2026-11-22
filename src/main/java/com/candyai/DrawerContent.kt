@@ -81,6 +81,7 @@ fun ConversationsDrawer(
     onOpen: (String) -> Unit,
     onNew: () -> Unit,
     onSettings: () -> Unit,
+    onProjects: () -> Unit,
     onDeleted: (String) -> Unit,
 ) {
     val c = LocalCandy.current
@@ -93,12 +94,15 @@ fun ConversationsDrawer(
     var menuFor by remember { mutableStateOf<String?>(null) }
     var renaming by remember { mutableStateOf<Conversation?>(null) }
     var deleting by remember { mutableStateOf<Conversation?>(null) }
+    var moving by remember { mutableStateOf<Conversation?>(null) }
+    var projectColors by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
 
     // the list is refreshed every time the drawer opens, and after every pin / rename / delete
     LaunchedEffect(isOpen, reloadKey, reload) {
         if (!isOpen) return@LaunchedEffect
         try {
             convs = Api.conversations()
+            projectColors = try { Api.projects().associate { it.id to it.color } } catch (_: Exception) { projectColors }
             error = null
         } catch (e: Exception) {
             error = errorMessage(ctx, e)
@@ -123,6 +127,17 @@ fun ConversationsDrawer(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
         )
+
+        Surface(
+            shape = RoundedCornerShape(14.dp), color = c.surface, border = BorderStroke(1.dp, c.border),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp).padding(bottom = 8.dp).clip(RoundedCornerShape(14.dp)).combinedClickable(onClick = onProjects),
+        ) {
+            Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.ic_projects), null, Modifier.size(30.dp))
+                Spacer(Modifier.width(12.dp))
+                Text(stringResource(R.string.projects), color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
 
         Box(Modifier.weight(1f).fillMaxWidth()) {
             val list = convs
@@ -164,6 +179,11 @@ fun ConversationsDrawer(
                                         Icon(Icons.Rounded.PushPin, null, tint = c.accent, modifier = Modifier.size(16.dp))
                                         Spacer(Modifier.width(8.dp))
                                     }
+                                    val pc = conv.projectId?.let { projectColors[it] }
+                                    if (pc != null) {
+                                        Box(Modifier.size(9.dp).clip(CircleShape).background(projectColor(pc)))
+                                        Spacer(Modifier.width(8.dp))
+                                    }
                                     Column(Modifier.weight(1f)) {
                                         Text(
                                             conv.title,
@@ -196,6 +216,14 @@ fun ConversationsDrawer(
                                             try { Api.pinConversation(conv.id, !conv.pinned) } catch (_: Exception) { }
                                             reload++
                                         }
+                                    },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.project_move), color = c.text) },
+                                    leadingIcon = { androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.ic_projects), null, Modifier.size(20.dp)) },
+                                    onClick = {
+                                        menuFor = null
+                                        moving = conv
                                     },
                                 )
                                 DropdownMenuItem(
@@ -304,6 +332,20 @@ fun ConversationsDrawer(
             },
             dismissButton = {
                 TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.cancel), color = c.subtext) }
+            },
+        )
+    }
+
+    moving?.let { conv ->
+        MoveToProjectDialog(
+            current = conv.projectId,
+            onDismiss = { moving = null },
+            onPick = { pid ->
+                moving = null
+                scope.launch {
+                    try { Api.moveToProject(conv.id, pid) } catch (_: Exception) { }
+                    reload++
+                }
             },
         )
     }

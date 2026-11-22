@@ -11,7 +11,9 @@ import java.security.SecureRandom
 
 class ApiException(val code: String, val status: Int) : Exception(code)
 
-data class Conversation(val id: String, val title: String, val updatedAt: Long, val pinned: Boolean = false)
+data class Conversation(val id: String, val title: String, val updatedAt: Long, val pinned: Boolean = false, val projectId: String? = null)
+
+data class Project(val id: String, val name: String, val color: Int, val instructions: String, val count: Int, val updatedAt: Long)
 
 /** One message. [n] is the server id; a negative [n] means it was just sent and has no id yet. */
 class AiMsg(
@@ -139,11 +141,37 @@ object Api {
         val arr = json("GET", "/conversations").getJSONArray("conversations")
         return (0 until arr.length()).map {
             val o = arr.getJSONObject(it)
-            Conversation(o.getString("id"), o.getString("title"), o.getLong("updated_at"), o.optInt("pinned", 0) == 1)
+            Conversation(o.getString("id"), o.getString("title"), o.getLong("updated_at"), o.optInt("pinned", 0) == 1, if (o.isNull("project_id")) null else o.optString("project_id"))
         }
     }
 
-    suspend fun createConversation(): String = json("POST", "/conversations", JSONObject()).getString("id")
+    suspend fun createConversation(projectId: String? = null): String {
+        val body = JSONObject()
+        if (projectId != null) body.put("project_id", projectId)
+        return json("POST", "/conversations", body).getString("id")
+    }
+
+    // ───── projects ─────
+    suspend fun projects(): List<Project> {
+        val arr = json("GET", "/projects").getJSONArray("projects")
+        return (0 until arr.length()).map {
+            val o = arr.getJSONObject(it)
+            Project(o.getString("id"), o.getString("name"), o.optInt("color", 0), o.optString("instructions", ""), o.optInt("count", 0), o.optLong("updated_at"))
+        }
+    }
+
+    suspend fun createProject(name: String, color: Int, instructions: String): String =
+        json("POST", "/projects", JSONObject().put("name", name).put("color", color).put("instructions", instructions)).getString("id")
+
+    suspend fun updateProject(id: String, name: String, color: Int, instructions: String) {
+        json("POST", "/projects/$id", JSONObject().put("name", name).put("color", color).put("instructions", instructions))
+    }
+
+    suspend fun deleteProject(id: String) { json("DELETE", "/projects/$id") }
+
+    suspend fun moveToProject(convId: String, projectId: String?) {
+        json("POST", "/conversations/$convId/project", JSONObject().put("project_id", projectId ?: JSONObject.NULL))
+    }
 
     suspend fun deleteConversation(id: String) { json("DELETE", "/conversations/$id") }
 

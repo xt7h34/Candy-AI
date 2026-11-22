@@ -138,4 +138,21 @@
     <string name="skin_faces_hint">وجه كاندي بيتغير على حسب كلامك معاها: بيزعل لو غبت 3 أيام، وبيفرح لما تتكلم، وبيبقى فرحان جدًا لو كلمتها كتير في يوم واحد.</string>
     <string name="attach_unsupported">نوع الملف ده مش مدعوم</string>
     <string name="attach_empty">ما لقيتش نص في الملف (ممكن يكون صور أو ممسوح ضوئيًا)</string>
+    <string name="projects">المشاريع</string>
+    <string name="project_new">مشروع جديد</string>
+    <string name="project_edit">تعديل المشروع</string>
+    <string name="project_name">اسم المشروع</string>
+    <string name="project_instructions">تعليمات المشروع (اختياري)</string>
+    <string name="project_instructions_hint">مثلاً: ردّي دايماً بالإنجليزي، أو: أنا بذاكر لامتحان…</string>
+    <string name="project_color">اللون</string>
+    <string name="project_empty">مفيش مشاريع لسه. اعمل مشروع وحط فيه محادثاتك.</string>
+    <string name="project_chats">%d محادثة</string>
+    <string name="project_no_chats">مفيش محادثات في المشروع ده</string>
+    <string name="project_new_chat">محادثة جديدة في المشروع</string>
+    <string name="project_move">نقل لمشروع</string>
+    <string name="project_remove">إخراج من المشروع</string>
+    <string name="project_delete_title">حذف المشروع؟</string>
+    <string name="project_delete_body">المشروع هيتحذف، لكن محادثاته هتفضل موجودة.</string>
+    <string name="project_instr_label">التعليمات</string>
+    <string name="project_no_instr">مفيش تعليمات</string>
 </resources>

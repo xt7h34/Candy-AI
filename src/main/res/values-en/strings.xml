@@ -136,4 +136,21 @@
     <string name="skin_faces_hint">Candy\'s face follows how much you talk to her: sad after 3 days of silence, happy when you chat, very happy when you talk a lot in one day.</string>
     <string name="attach_unsupported">This file type is not supported</string>
     <string name="attach_empty">I could not find any text in the file (it may be scanned or only pictures)</string>
+    <string name="projects">Projects</string>
+    <string name="project_new">New project</string>
+    <string name="project_edit">Edit project</string>
+    <string name="project_name">Project name</string>
+    <string name="project_instructions">Project instructions (optional)</string>
+    <string name="project_instructions_hint">e.g. always answer in English, or: I am studying for an exam…</string>
+    <string name="project_color">Color</string>
+    <string name="project_empty">No projects yet. Create one and put your chats in it.</string>
+    <string name="project_chats">%d chats</string>
+    <string name="project_no_chats">No chats in this project yet</string>
+    <string name="project_new_chat">New chat in project</string>
+    <string name="project_move">Move to project</string>
+    <string name="project_remove">Remove from project</string>
+    <string name="project_delete_title">Delete this project?</string>
+    <string name="project_delete_body">The project is deleted, but its chats stay.</string>
+    <string name="project_instr_label">Instructions</string>
+    <string name="project_no_instr">No instructions</string>
 </resources>

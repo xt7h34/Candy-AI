@@ -136,6 +136,8 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
     // the chat always starts on a fresh conversation; picking one in the drawer re-creates the chat screen with it
     // saved across a restart, so changing the language in the settings brings you back to the same chat and the same page
     var startId by rememberSaveable { mutableStateOf<String?>(null) }
+    var startProject by rememberSaveable { mutableStateOf<String?>(null) }
+    var projectsOpen by rememberSaveable { mutableStateOf(false) }
     var activeId by rememberSaveable { mutableStateOf<String?>(null) }
     var chatKey by remember { mutableIntStateOf(0) }
     var listKey by remember { mutableIntStateOf(0) }
@@ -144,7 +146,9 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
     var side by remember { mutableStateOf(Store.drawerSide) }
     var sendSide by remember { mutableStateOf(Store.sendSide) }
 
-    fun openChat(id: String?) {
+    fun openChat(id: String?, project: String? = null) {
+        startProject = project
+        projectsOpen = false
         startId = id
         activeId = id
         chatKey++
@@ -179,6 +183,10 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
                                 // already on an empty chat: just close the drawer
                                 if (activeId == null) scope.launch { drawerState.close() } else openChat(null)
                             },
+                            onProjects = {
+                                projectsOpen = true
+                                scope.launch { drawerState.close() }
+                            },
                             onSettings = {
                                 settingsOpen = true
                                 scope.launch { drawerState.close() }
@@ -193,6 +201,7 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
                         key(chatKey) {
                             ChatScreen(
                                 startId = startId,
+                                projectId = startProject,
                                 menuOnLeft = side == "left",
                                 sendOnLeft = sendSide == "left",
                                 onMenu = { scope.launch { drawerState.open() } },
@@ -226,6 +235,13 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
                     listKey++
                     openChat(null)
                 },
+            )
+        }
+        if (projectsOpen) {
+            ProjectsScreen(
+                onBack = { projectsOpen = false },
+                onOpenChat = { openChat(it) },
+                onNewChat = { openChat(null, it) },
             )
         }
         if (memoryOpen) {
