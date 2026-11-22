@@ -183,4 +183,26 @@
     <string name="sugar_pin">تثبيت</string>
     <string name="sugar_too_many">وصلت للحد الأقصى من الملاحظات.</string>
     <string name="sugar_widget_desc">آخر ملاحظاتك من شوقر نوت على الشاشة الرئيسية</string>
+    <string name="sugar_remind_title">كاندي فكّرتك 🍬</string>
+    <string name="sugar_remind_body">افتكر: %1$s</string>
+    <string name="sugar_channel">تذكيرات شوقر نوت</string>
+    <string name="sugar_ask_no_time">في ملاحظتك «%1$s» (%2$s) بس معرفش الميعاد بالظبط. أفكرك إمتى؟</string>
+    <string name="sugar_ask_time">في ملاحظتك «%1$s» (%2$s). أفكرك إمتى؟</string>
+    <string name="sugar_ask_label">سؤال %1$02d</string>
+    <string name="sugar_ask_hint">اختار إجابة واحدة بس</string>
+    <string name="sugar_opt_hour_before">قبلها بساعة</string>
+    <string name="sugar_opt_night_before">الليلة اللي قبلها 8 م</string>
+    <string name="sugar_opt_morning_of">الصبح 8 ص يوم الحدث</string>
+    <string name="sugar_opt_at_time">في وقت الحدث نفسه</string>
+    <string name="sugar_opt_custom">هحدّد وقت بنفسي</string>
+    <string name="sugar_opt_none">لا شكرًا، مش محتاج تذكير</string>
+    <string name="sugar_next">تمام</string>
+    <string name="sugar_back">إلغاء</string>
+    <string name="sugar_done_title">تمام، هفكرك!</string>
+    <string name="sugar_done_body">هفكرك بـ«%1$s» %2$s.</string>
+    <string name="sugar_done_btn">تمام</string>
+    <string name="sugar_reminder">تذكير</string>
+    <string name="sugar_reminder_set">ضبط تذكير</string>
+    <string name="sugar_reminder_change">تغيير</string>
+    <string name="sugar_reminder_clear">إلغاء التذكير</string>
 </resources>

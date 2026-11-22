@@ -13,7 +13,10 @@ class ApiException(val code: String, val status: Int) : Exception(code)
 
 data class Conversation(val id: String, val title: String, val updatedAt: Long, val pinned: Boolean = false, val projectId: String? = null, val notebookId: String? = null)
 
-data class Note(val id: String, val text: String, val color: Int, val pinned: Boolean, val updatedAt: Long)
+data class Note(val id: String, val text: String, val color: Int, val pinned: Boolean, val updatedAt: Long, val remindAt: Long = 0, val analyzed: Boolean = true)
+
+/** Candy found a future event in a note: [day] is yyyy-MM-dd, [time] is HH:mm or null when the note does not say. */
+data class NoteSuggest(val event: String, val whenText: String, val day: String, val time: String?)
 
 data class Notebook(val id: String, val name: String, val color: Int, val sources: Int, val chats: Int)
 
@@ -163,15 +166,23 @@ object Api {
         val arr = json("GET", "/notes").getJSONArray("notes")
         return (0 until arr.length()).map {
             val o = arr.getJSONObject(it)
-            Note(o.getString("id"), o.getString("text"), o.optInt("color", 0), o.optInt("pinned", 0) == 1, o.optLong("updated_at"))
+            Note(o.getString("id"), o.getString("text"), o.optInt("color", 0), o.optInt("pinned", 0) == 1, o.optLong("updated_at"), if (o.isNull("remind_at")) 0L else o.optLong("remind_at"), o.optInt("analyzed", 1) == 1)
         }
     }
 
-    suspend fun createNote(text: String, color: Int, pinned: Boolean): String =
-        json("POST", "/notes", JSONObject().put("text", text).put("color", color).put("pinned", pinned)).getString("id")
+    suspend fun createNote(text: String, color: Int, pinned: Boolean, remindAt: Long? = null): String =
+        json("POST", "/notes", JSONObject().put("text", text).put("color", color).put("pinned", pinned).put("remind_at", remindAt ?: JSONObject.NULL)).getString("id")
 
-    suspend fun updateNote(id: String, text: String, color: Int, pinned: Boolean) {
-        json("POST", "/notes/$id", JSONObject().put("text", text).put("color", color).put("pinned", pinned))
+    suspend fun updateNote(id: String, text: String, color: Int, pinned: Boolean, remindAt: Long?) {
+        json("POST", "/notes/$id", JSONObject().put("text", text).put("color", color).put("pinned", pinned).put("remind_at", remindAt ?: JSONObject.NULL))
+    }
+
+    /** Asks the server (once per note) whether the note mentions a future event. [now] is the phone's local date and time as text. */
+    suspend fun analyzeNote(id: String, now: String): NoteSuggest? {
+        val s = json("POST", "/notes/$id/analyze", JSONObject().put("now", now))
+        if (s.isNull("suggest")) return null
+        val o = s.getJSONObject("suggest")
+        return NoteSuggest(o.optString("event"), o.optString("when_text"), o.getString("day"), if (o.isNull("time")) null else o.optString("time"))
     }
 
     suspend fun deleteNote(id: String) { json("DELETE", "/notes/$id") }

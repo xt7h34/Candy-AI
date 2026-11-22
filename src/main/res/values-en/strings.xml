@@ -181,4 +181,26 @@
     <string name="sugar_pin">Pin</string>
     <string name="sugar_too_many">You reached the maximum number of notes.</string>
     <string name="sugar_widget_desc">Your latest SugarNote notes on the home screen</string>
+    <string name="sugar_remind_title">Candy reminder 🍬</string>
+    <string name="sugar_remind_body">Remember: %1$s</string>
+    <string name="sugar_channel">SugarNote reminders</string>
+    <string name="sugar_ask_no_time">Your note mentions \"%1$s\" (%2$s) but I don\'t know the exact time. When should I remind you?</string>
+    <string name="sugar_ask_time">Your note mentions \"%1$s\" (%2$s). When should I remind you?</string>
+    <string name="sugar_ask_label">QUESTION %1$02d</string>
+    <string name="sugar_ask_hint">SELECT ONLY ONE</string>
+    <string name="sugar_opt_hour_before">One hour before</string>
+    <string name="sugar_opt_night_before">The evening before, 8 PM</string>
+    <string name="sugar_opt_morning_of">That morning, 8 AM</string>
+    <string name="sugar_opt_at_time">At the time itself</string>
+    <string name="sugar_opt_custom">I\'ll pick a time</string>
+    <string name="sugar_opt_none">No thanks, no reminder</string>
+    <string name="sugar_next">Next</string>
+    <string name="sugar_back">Cancel</string>
+    <string name="sugar_done_title">Done, I\'ll remind you!</string>
+    <string name="sugar_done_body">I\'ll remind you about \"%1$s\" %2$s.</string>
+    <string name="sugar_done_btn">Done</string>
+    <string name="sugar_reminder">Reminder</string>
+    <string name="sugar_reminder_set">Set a reminder</string>
+    <string name="sugar_reminder_change">Change</string>
+    <string name="sugar_reminder_clear">Clear reminder</string>
 </resources>
