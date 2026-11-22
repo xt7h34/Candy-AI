@@ -124,28 +124,6 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Candy writes light markdown: **bold** and "- " lists. That is all this understands. */
-internal fun aiRich(text: String, bold: SpanStyle): AnnotatedString = buildAnnotatedString {
-    val lines = text.split("\n")
-    for ((li, raw) in lines.withIndex()) {
-        val line = if (raw.startsWith("- ") || raw.startsWith("* ")) "• " + raw.substring(2) else raw
-        var i = 0
-        while (i < line.length) {
-            val s = line.indexOf("**", i)
-            val e = if (s >= 0) line.indexOf("**", s + 2) else -1
-            if (s < 0 || e < 0) {
-                append(line.substring(i))
-                break
-            }
-            append(line.substring(i, s))
-            withStyle(bold) { append(line.substring(s + 2, e)) }
-            i = e + 2
-        }
-        if (li < lines.lastIndex) append("\n")
-    }
-}
-
-
 internal fun aiDayLabel(ctx: Context, t: Long): String = when {
     DateUtils.isToday(t) -> ctx.getString(R.string.chat_today)
     DateUtils.isToday(t + DateUtils.DAY_IN_MILLIS) -> ctx.getString(R.string.chat_yesterday)
@@ -185,7 +163,6 @@ internal fun AiBubble(m: AiMsg) {
     val big = 20.dp
     val small = 6.dp
     val cs = MaterialTheme.colorScheme
-    val boldSpan = SpanStyle(fontWeight = FontWeight.Bold)
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = if (m.mine) Arrangement.End else Arrangement.Start,
@@ -219,7 +196,7 @@ internal fun AiBubble(m: AiMsg) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     for (a in m.atts) AttachView(a, large = true)
                     if (m.text.isNotBlank()) SelectionContainer {
-                        Text(aiRich(m.text, boldSpan), color = cs.onSurface, style = MaterialTheme.typography.bodyLarge)
+                        AiMarkdown(m.text)
                     }
                 }
             }
