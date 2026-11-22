@@ -424,7 +424,7 @@ fun ChatScreen(
         if (uri != null) {
             if (pending.size >= AttachKit.MAX_FILES) { error = ctx.getString(R.string.attach_max); return@rememberLauncherForActivityResult }
             scope.launch {
-                val p = AttachKit.fromText(ctx, uri)
+                val p = AttachKit.fromDocument(ctx, uri)
                 if (p != null) pending.add(p) else error = ctx.getString(R.string.attach_fail)
             }
         }
@@ -715,7 +715,7 @@ fun ChatScreen(
                                     onGallery = {
                                         galleryPicker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                                     },
-                                    onFile = { filePicker.launch(arrayOf("text/*", "application/json", "application/xml", "application/csv")) },
+                                    onFile = { filePicker.launch(arrayOf("*/*")) },
                                 )
                             }
                             Box(Modifier.weight(1f).padding(start = 4.dp, end = 16.dp, top = 12.dp, bottom = 12.dp)) {

@@ -177,7 +177,7 @@ object Api {
             for (f in files) arr.put(JSONObject().put("kind", f.kind).put("mime", f.mime).put("name", f.name).put("data", f.b64))
             body.put("attachments", arr)
         }
-        return json("POST", "/conversations/$conversationId/messages", body, readTimeoutMs = 45000).getString("job_id")
+        return json("POST", "/conversations/$conversationId/messages", body, readTimeoutMs = if (files.any { it.kind == "doc" }) 180000 else 45000).getString("job_id")
     }
 
     /** A picture or file attached to a message, as raw bytes. */
@@ -257,6 +257,8 @@ fun errorMessage(ctx: Context, e: Throwable): String = when {
     e is ApiException && e.code == "voice_limit" -> ctx.getString(R.string.ai_voice_limit)
     e is ApiException && e.code == "voice_empty" -> ctx.getString(R.string.ai_voice_empty)
     e is ApiException && e.code == "stt_empty" -> ctx.getString(R.string.ai_stt_empty)
+    e is ApiException && e.code == "unsupported_file" -> ctx.getString(R.string.attach_unsupported)
+    e is ApiException && e.code == "empty_doc" -> ctx.getString(R.string.attach_empty)
     e is ApiException && e.code == "image_limit" -> ctx.getString(R.string.attach_image_limit)
     e is ApiException && (e.code == "bad_attachment" || e.code == "attachment_too_large" || e.code == "too_many_attachments" || e.status == 413) -> ctx.getString(R.string.attach_fail)
     e is ApiException && e.code == "not_found" -> ctx.getString(R.string.ai_voice_gone)

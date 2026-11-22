@@ -62,7 +62,7 @@
     <string name="attach">Attach</string>
     <string name="attach_camera">Camera</string>
     <string name="attach_gallery">Photo from gallery</string>
-    <string name="attach_file">Text file</string>
+    <string name="attach_file">File (PDF, Word, Excel…)</string>
     <string name="attach_remove">Remove</string>
     <string name="attach_fail">Couldn\'t read that file. Try a picture or a text file (txt, md, csv, json).</string>
     <string name="attach_image_limit">You reached today\'s picture limit. Try again tomorrow.</string>
@@ -134,4 +134,6 @@
     <string name="skin_bear">Bear</string>
     <string name="skin_faces">Faces</string>
     <string name="skin_faces_hint">Candy\'s face follows how much you talk to her: sad after 3 days of silence, happy when you chat, very happy when you talk a lot in one day.</string>
+    <string name="attach_unsupported">This file type is not supported</string>
+    <string name="attach_empty">I could not find any text in the file (it may be scanned or only pictures)</string>
 </resources>

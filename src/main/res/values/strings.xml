@@ -64,7 +64,7 @@
     <string name="attach">إرفاق</string>
     <string name="attach_camera">الكاميرا</string>
     <string name="attach_gallery">صورة من المعرض</string>
-    <string name="attach_file">ملف نصي</string>
+    <string name="attach_file">ملف (PDF، Word، Excel…)</string>
     <string name="attach_remove">إزالة</string>
     <string name="attach_fail">مقدرتش أقرا الملف ده. جرّب صورة أو ملف نصي (txt أو md أو csv أو json).</string>
     <string name="attach_image_limit">وصلت للحد اليومي للصور. جرّب بكرة.</string>
@@ -136,4 +136,6 @@
     <string name="skin_bear">دبدوب</string>
     <string name="skin_faces">وجوه</string>
     <string name="skin_faces_hint">وجه كاندي بيتغير على حسب كلامك معاها: بيزعل لو غبت 3 أيام، وبيفرح لما تتكلم، وبيبقى فرحان جدًا لو كلمتها كتير في يوم واحد.</string>
+    <string name="attach_unsupported">نوع الملف ده مش مدعوم</string>
+    <string name="attach_empty">ما لقيتش نص في الملف (ممكن يكون صور أو ممسوح ضوئيًا)</string>
 </resources>

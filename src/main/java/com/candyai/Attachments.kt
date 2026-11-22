@@ -134,6 +134,28 @@ object AttachKit {
     }
 
     /** Reads a plain-text file (txt, md, csv, json, code...). Anything binary (PDF, Word...) is refused. */
+    private const val MAX_DOC_BYTES = 25_000_000
+
+    /** Any file (PDF, Word, Excel, PowerPoint, text...): it goes as it is and the server pulls the text out of it. */
+    suspend fun fromDocument(ctx: Context, uri: Uri): Pending? = withContext(Dispatchers.IO) {
+        try {
+            val out = java.io.ByteArrayOutputStream()
+            ctx.contentResolver.openInputStream(uri)?.use { s ->
+                val buf = ByteArray(64 * 1024)
+                while (true) {
+                    val r = s.read(buf)
+                    if (r < 0) break
+                    out.write(buf, 0, r)
+                    if (out.size() > MAX_DOC_BYTES) return@withContext null
+                }
+            } ?: return@withContext null
+            if (out.size() == 0) return@withContext null
+            Pending("doc", ctx.contentResolver.getType(uri) ?: "application/octet-stream", displayName(ctx, uri, "file"), Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP), null)
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     suspend fun fromText(ctx: Context, uri: Uri): Pending? = withContext(Dispatchers.IO) {
         try {
             val bytes = ctx.contentResolver.openInputStream(uri)?.use { s ->
@@ -244,7 +266,7 @@ fun PendingStrip(list: List<Pending>, onRemove: (Pending) -> Unit) {
 @Composable
 fun AttachView(a: AttRef, large: Boolean = false) {
     val cs = MaterialTheme.colorScheme
-    if (a.kind == "text") {
+    if (a.kind != "image") {
         Row(
             Modifier.clip(RoundedCornerShape(10.dp)).background(Color.Black.copy(alpha = 0.12f)).padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,

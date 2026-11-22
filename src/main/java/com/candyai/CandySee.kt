@@ -309,7 +309,7 @@ fun SeeCapsule(
     }
     val files = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null && !full()) scope.launch {
-            val p = AttachKit.fromText(ctx, uri)
+            val p = AttachKit.fromDocument(ctx, uri)
             if (p != null) chat.pending.add(p) else chat.error = ctx.getString(R.string.attach_fail)
         }
     }
@@ -481,7 +481,7 @@ fun SeeCapsule(
                             onDismiss = { menu = false },
                             onCamera = { openCamera() },
                             onGallery = { gallery.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-                            onFile = { files.launch(arrayOf("text/*", "application/json", "application/xml", "application/csv")) },
+                            onFile = { files.launch(arrayOf("*/*")) },
                             onScreen = if (frozen) null else ({ takeScreen() }),
                             onCircle = if (frozen) null else onCircle,
                         )
