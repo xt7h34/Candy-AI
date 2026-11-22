@@ -56,6 +56,8 @@ class PollResult(
     val messageId: Long,
     /** Pictures Candy drew for this reply (empty most of the time). */
     val atts: List<AttRef> = emptyList(),
+    /** Ids of SugarNote notes Candy wrote in this reply. */
+    val notes: List<String> = emptyList(),
 )
 
 class VoiceStatus(val ttsOn: Boolean, val ttsLeft: Int, val ttsLimit: Int, val sttOn: Boolean)
