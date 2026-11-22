@@ -42,7 +42,7 @@ enum class TabSkin(val key: String) {
  * How Candy feels, from how much the person talked to her: 0 sad (nothing for 3 days or more), 1 neutral (a day or more of quiet),
  * 2 happy (talked today), 3 very happy (6 or more messages in the last 24 hours).
  */
-object Mood {
+object FaceMood {
     private const val DAY = 24L * 60 * 60 * 1000
     fun level(now: Long = System.currentTimeMillis()): Int {
         val last = Store.lastSend

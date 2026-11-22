@@ -176,7 +176,7 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
     private var mood by mutableStateOf(1)
     private val moodTick = object : Runnable {
         override fun run() {
-            mood = Mood.level()
+            mood = FaceMood.level()
             handler.postDelayed(this, 10 * 60 * 1000L)
         }
     }
@@ -502,7 +502,7 @@ class CandyOverlayService : Service(), LifecycleOwner, SavedStateRegistryOwner, 
     private fun syncVisibility() {
         val r = root ?: return
         skin = TabSkin.of(Store.tabSkin)   // the shape may have just been changed in Settings
-        mood = Mood.level()
+        mood = FaceMood.level()
         val show = CandyOverlay.foreground == 0
         r.visibility = if (show) View.VISIBLE else View.GONE
         lp.flags = if (show) {
