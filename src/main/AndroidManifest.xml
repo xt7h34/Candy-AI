@@ -63,6 +63,18 @@
             android:windowSoftInputMode="adjustResize" />
 
         <!-- Candy Edge: Candy peeking from the edge of the phone's screen, over every app -->
+        <!-- SugarNote home-screen widget -->
+        <receiver
+            android:name=".SugarWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/sugar_widget_info" />
+        </receiver>
+
         <!-- Candy See: one screenshot taken after the person approves the system's "share your screen" prompt -->
         <service
             android:name=".CaptureService"

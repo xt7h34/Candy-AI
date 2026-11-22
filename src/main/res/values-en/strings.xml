@@ -173,4 +173,12 @@
     <string name="notella_delete_title">Delete this notebook?</string>
     <string name="notella_delete_body">The notebook, its sources and its chats will be deleted.</string>
     <string name="notella_source_delete">Delete source</string>
+    <string name="sugar">SugarNote</string>
+    <string name="sugar_new">New note</string>
+    <string name="sugar_edit">Edit note</string>
+    <string name="sugar_hint">Write your note…</string>
+    <string name="sugar_empty">No notes yet. Tap + or tell Candy "save a note…"</string>
+    <string name="sugar_pin">Pin</string>
+    <string name="sugar_too_many">You reached the maximum number of notes.</string>
+    <string name="sugar_widget_desc">Your latest SugarNote notes on the home screen</string>
 </resources>

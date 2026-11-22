@@ -13,6 +13,8 @@ class ApiException(val code: String, val status: Int) : Exception(code)
 
 data class Conversation(val id: String, val title: String, val updatedAt: Long, val pinned: Boolean = false, val projectId: String? = null, val notebookId: String? = null)
 
+data class Note(val id: String, val text: String, val color: Int, val pinned: Boolean, val updatedAt: Long)
+
 data class Notebook(val id: String, val name: String, val color: Int, val sources: Int, val chats: Int)
 
 data class Source(val id: String, val name: String, val chars: Int)
@@ -155,6 +157,24 @@ object Api {
         if (notebookId != null) body.put("notebook_id", notebookId)
         return json("POST", "/conversations", body).getString("id")
     }
+
+    // ───── SugarNote ─────
+    suspend fun notes(): List<Note> {
+        val arr = json("GET", "/notes").getJSONArray("notes")
+        return (0 until arr.length()).map {
+            val o = arr.getJSONObject(it)
+            Note(o.getString("id"), o.getString("text"), o.optInt("color", 0), o.optInt("pinned", 0) == 1, o.optLong("updated_at"))
+        }
+    }
+
+    suspend fun createNote(text: String, color: Int, pinned: Boolean): String =
+        json("POST", "/notes", JSONObject().put("text", text).put("color", color).put("pinned", pinned)).getString("id")
+
+    suspend fun updateNote(id: String, text: String, color: Int, pinned: Boolean) {
+        json("POST", "/notes/$id", JSONObject().put("text", text).put("color", color).put("pinned", pinned))
+    }
+
+    suspend fun deleteNote(id: String) { json("DELETE", "/notes/$id") }
 
     // ───── Notella ─────
     suspend fun notebooks(): List<Notebook> {
@@ -327,6 +347,7 @@ fun errorMessage(ctx: Context, e: Throwable): String = when {
     e is ApiException && e.code == "stt_empty" -> ctx.getString(R.string.ai_stt_empty)
     e is ApiException && e.code == "unsupported_file" -> ctx.getString(R.string.attach_unsupported)
     e is ApiException && e.code == "empty_doc" -> ctx.getString(R.string.attach_empty)
+    e is ApiException && e.code == "too_many_notes" -> ctx.getString(R.string.sugar_too_many)
     e is ApiException && e.code == "too_many_sources" -> ctx.getString(R.string.notella_too_many)
     e is ApiException && e.code == "image_limit" -> ctx.getString(R.string.attach_image_limit)
     e is ApiException && (e.code == "bad_attachment" || e.code == "attachment_too_large" || e.code == "too_many_attachments" || e.status == 413) -> ctx.getString(R.string.attach_fail)

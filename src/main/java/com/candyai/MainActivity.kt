@@ -37,6 +37,8 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     // a conversation the ask panel handed over ("open the full chat")
     private var pendingConv by mutableStateOf<String?>(null)
+    // the home-screen widget asks for SugarNote: "list" or "new"
+    private var pendingSugar by mutableStateOf<String?>(null)
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(Lang.wrap(newBase))
@@ -49,6 +51,7 @@ class MainActivity : ComponentActivity() {
         ThemeMode.load()
         // not after a restart (language change): the intent still carries the old request
         if (savedInstanceState == null) pendingConv = intent?.getStringExtra("open_conv")
+        if (savedInstanceState == null) pendingSugar = intent?.getStringExtra("open_sugar")
         setContent {
             val dark = rememberDark()
             // the bars' icons follow the app's theme, which can differ from the phone's
@@ -64,7 +67,7 @@ class MainActivity : ComponentActivity() {
                     UpdatePrompt()
                     var loggedIn by remember { mutableStateOf(Store.loginDone) }
                     if (loggedIn) {
-                        CandyApp(pendingConv) { pendingConv = null }
+                        CandyApp(pendingConv, { pendingConv = null }, pendingSugar) { pendingSugar = null }
                     } else {
                         val scope = rememberCoroutineScope()
                         var googleBusy by remember { mutableStateOf(false) }
@@ -122,12 +125,13 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         intent.getStringExtra("open_conv")?.let { pendingConv = it }
+        intent.getStringExtra("open_sugar")?.let { pendingSugar = it }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
+fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}, pendingSugar: String? = null, onSugarHandled: () -> Unit = {}) {
     val c = LocalCandy.current
     val scope = rememberCoroutineScope()
     val appDir = LocalLayoutDirection.current
@@ -140,6 +144,8 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
     var projectsOpen by rememberSaveable { mutableStateOf(false) }
     var startNotebook by rememberSaveable { mutableStateOf<String?>(null) }
     var notellaOpen by rememberSaveable { mutableStateOf(false) }
+    var sugarOpen by rememberSaveable { mutableStateOf(false) }
+    var sugarNew by remember { mutableStateOf(false) }
     var activeId by rememberSaveable { mutableStateOf<String?>(null) }
     var chatKey by remember { mutableIntStateOf(0) }
     var listKey by remember { mutableIntStateOf(0) }
@@ -153,6 +159,7 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
         startNotebook = notebook
         projectsOpen = false
         notellaOpen = false
+        sugarOpen = false
         startId = id
         activeId = id
         chatKey++
@@ -163,6 +170,14 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
         if (pendingConv != null) {
             openChat(pendingConv)
             onPendingHandled()
+        }
+    }
+
+    LaunchedEffect(pendingSugar) {
+        if (pendingSugar != null) {
+            sugarNew = pendingSugar == "new"
+            sugarOpen = true
+            onSugarHandled()
         }
     }
 
@@ -186,6 +201,11 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
                             onNew = {
                                 // already on an empty chat: just close the drawer
                                 if (activeId == null) scope.launch { drawerState.close() } else openChat(null)
+                            },
+                            onSugar = {
+                                sugarNew = false
+                                sugarOpen = true
+                                scope.launch { drawerState.close() }
                             },
                             onNotella = {
                                 notellaOpen = true
@@ -252,6 +272,9 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}) {
                 onOpenChat = { openChat(it) },
                 onNewChat = { openChat(null, it) },
             )
+        }
+        if (sugarOpen) {
+            SugarNoteScreen(onBack = { sugarOpen = false }, startNew = sugarNew)
         }
         if (notellaOpen) {
             NotellaScreen(
