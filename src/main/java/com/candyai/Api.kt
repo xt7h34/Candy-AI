@@ -22,6 +22,10 @@ data class Notebook(val id: String, val name: String, val color: Int, val source
 
 data class Source(val id: String, val name: String, val chars: Int)
 
+class AgentStep(
+    val action: String, val id: Int?, val text: String, val direction: String, val x: Int?, val y: Int?,
+    val app: String, val seconds: Int, val question: String, val summary: String, val note: String, val confirm: String,
+)
 data class ArtifactItem(val id: String, val title: String, val type: String, val updatedAt: Long)
 data class ArtifactFull(val id: String, val title: String, val type: String, val lang: String, val current: Int, val content: String, val versions: List<Pair<Int, Long>>)
 data class Project(val id: String, val name: String, val color: Int, val instructions: String, val count: Int, val updatedAt: Long)
@@ -229,6 +233,22 @@ object Api {
     }
 
     suspend fun deleteSource(id: String) { json("DELETE", "/sources/$id") }
+
+    // ───── agent (Candy controls the screen, one step at a time) ─────
+    suspend fun agentStart(goal: String): String = json("POST", "/agent/start", JSONObject().put("goal", goal)).getString("id")
+
+    suspend fun agentStep(id: String, screen: String, shotB64: String?, last: String, app: String, size: String): AgentStep {
+        val body = JSONObject().put("screen", screen).put("last", last).put("app", app).put("size", size)
+        if (shotB64 != null) body.put("shot", JSONObject().put("mime", "image/jpeg").put("data", shotB64))
+        val j = json("POST", "/agent/$id/step", body, 90000)
+        fun intOrNull(k: String): Int? = if (j.has(k) && !j.isNull(k)) j.optInt(k) else null
+        return AgentStep(
+            j.optString("action", "wait"), intOrNull("id"), j.optString("text", ""), j.optString("direction", "down"), intOrNull("x"), intOrNull("y"),
+            j.optString("app", ""), j.optInt("seconds", 2), j.optString("question", ""), j.optString("summary", ""), j.optString("note", ""), j.optString("confirm", ""),
+        )
+    }
+
+    suspend fun agentEnd(id: String) { json("DELETE", "/agent/$id") }
 
     // ───── artifacts ─────
     suspend fun artifacts(): List<ArtifactItem> {

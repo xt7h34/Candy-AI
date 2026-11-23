@@ -107,6 +107,20 @@
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
 
+        <!-- Candy's hands: reads the screen and taps / types for the person, only when they ask and approve -->
+        <service
+            android:name=".CandyAgentService"
+            android:exported="true"
+            android:label="@string/agent_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/candy_accessibility" />
+        </service>
+
         <service
             android:name=".CandyOverlayService"
             android:exported="false"

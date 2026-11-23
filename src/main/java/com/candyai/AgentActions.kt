@@ -55,6 +55,7 @@ object AgentActions {
         "sms" -> a.arg(0).replace(Regex("[^\\d+*#]"), "").isNotEmpty() && a.arg(1).isNotBlank()
         "open", "map", "search" -> a.arg(0).isNotBlank()
         "url" -> isHttps(a.arg(0))
+        "agent" -> a.arg(0).isNotBlank()
         else -> false
     }
 
@@ -74,6 +75,7 @@ object AgentActions {
         "url" -> ctx.getString(R.string.agent_url, a.arg(0))
         "map" -> ctx.getString(R.string.agent_map, a.arg(0))
         "search" -> ctx.getString(R.string.agent_search, a.arg(0))
+        "agent" -> ctx.getString(R.string.agent_goal, a.arg(0))
         else -> a.type
     }
 
@@ -109,10 +111,22 @@ object AgentActions {
         "call" -> go(ctx, Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", a.arg(0).replace(Regex("[^\\d+*#]"), ""), null)))
         "sms" -> go(ctx, Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + a.arg(0).replace(Regex("[^\\d+*#]"), ""))).putExtra("sms_body", a.arg(1)))
         "open" -> openApp(ctx, a.arg(0))
+        "agent" -> startAgent(ctx, a.arg(0))
         "url" -> go(ctx, Intent(Intent.ACTION_VIEW, Uri.parse(a.arg(0))))
         "map" -> go(ctx, Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(a.arg(0)))))
         "search" -> go(ctx, Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(a.arg(0)))))
         else -> false
+    }
+
+    /** Candy takes the screen: needs the accessibility service. Without it, the person is sent to switch it on. */
+    private fun startAgent(ctx: Context, goal: String): Boolean {
+        val svc = CandyAgentService.inst
+        if (svc == null || !CandyAgentService.enabled(ctx)) {
+            Toast.makeText(ctx, R.string.agent_need_service, Toast.LENGTH_LONG).show()
+            return go(ctx, Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
+        svc.start(goal)
+        return true
     }
 
     private fun norm(s: String) = s.lowercase().replace(Regex("\\s+"), "")

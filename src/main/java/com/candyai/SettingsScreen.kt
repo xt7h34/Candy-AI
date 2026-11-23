@@ -268,6 +268,9 @@ fun SettingsScreen(
                 }
             }
 
+            // Candy the agent: screen control, assistant status
+            AgentSettingsCard()
+
             // app updates
             UpdateSection()
 
@@ -275,6 +278,9 @@ fun SettingsScreen(
         }
     }
 }
+
+@Composable
+internal fun SettingsCardPublic(content: @Composable ColumnScope.() -> Unit) = SettingsCard(content = content)
 
 @Composable
 private fun SettingsCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {

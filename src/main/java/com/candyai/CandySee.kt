@@ -351,13 +351,9 @@ fun SeeCapsule(
             afterShot = null
         }
     }
-    /** Screenshot into the attachments. The one the assistant already handed over is used when there is one; otherwise the system asks once. */
-    fun takeScreen(then: (() -> Unit)? = null, translate: Boolean = false) {
-        if (full()) return
-        val held = SeeHolder.shot
-        afterShot = then
-        if (held != null) { gotShot(held); return }
-        // first choice: Candy's own assistant session hands over a real screenshot, no permission prompt
+    /** The older ways: the assistant session hands over a screenshot, or the system asks once ("share your screen"). */
+    fun legacyShot(translate: Boolean) {
+        // Candy's own assistant session hands over a real screenshot, no permission prompt
         if (EdgeInteractionService.show("shot", if (translate) "translate" else null)) {
             afterShot = null
             onClose()
@@ -369,6 +365,26 @@ fun SeeCapsule(
             afterShot = null
             chat.error = ctx.getString(R.string.see_no_screen)
         }
+    }
+
+    /** Screenshot into the attachments. The one the assistant already handed over is used when there is one. */
+    fun takeScreen(then: (() -> Unit)? = null, translate: Boolean = false) {
+        if (full()) return
+        val held = SeeHolder.shot
+        afterShot = then
+        if (held != null) { gotShot(held); return }
+        // best choice: Candy's accessibility service takes it, no prompt at all (Android 11+)
+        val svc = CandyAgentService.inst
+        if (svc != null && android.os.Build.VERSION.SDK_INT >= 30) {
+            chat.capturing = true
+            scope.launch {
+                delay(350)   // the panel hides itself first
+                val b = svc.screenshotBitmap()
+                if (b != null) gotShot(b) else { chat.capturing = false; legacyShot(translate) }
+            }
+            return
+        }
+        legacyShot(translate)
     }
 
     // ───── translate: text if there is some, else the screen ─────
