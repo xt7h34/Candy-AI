@@ -289,4 +289,5 @@
     <string name="agent_assistant_off">المساعد الرئيسي: مش كاندي (لقطة الشاشة ممكن تطلب إذن)</string>
     <string name="agent_hide_notif_hint">إشعار «كاندي على شاشتك» بتطلبه أندرويد طول ما كاندي العايمة شغّالة. تقدر تخفيه من إعدادات القناة.</string>
     <string name="agent_hide_notif">إخفاء إشعار كاندي</string>
+    <string name="agent_settings_open">⚙️ فتح إعدادات «%1$s»</string>
 </resources>

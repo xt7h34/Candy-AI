@@ -56,6 +56,7 @@ object AgentActions {
         "open", "map", "search" -> a.arg(0).isNotBlank()
         "url" -> isHttps(a.arg(0))
         "agent" -> a.arg(0).isNotBlank()
+        "settings" -> a.arg(0).isNotBlank()
         else -> false
     }
 
@@ -76,6 +77,7 @@ object AgentActions {
         "map" -> ctx.getString(R.string.agent_map, a.arg(0))
         "search" -> ctx.getString(R.string.agent_search, a.arg(0))
         "agent" -> ctx.getString(R.string.agent_goal, a.arg(0))
+        "settings" -> ctx.getString(R.string.agent_settings_open, a.arg(0))
         else -> a.type
     }
 
@@ -110,8 +112,9 @@ object AgentActions {
         // the dialer opens with the number; the person presses call / send themselves
         "call" -> go(ctx, Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", a.arg(0).replace(Regex("[^\\d+*#]"), ""), null)))
         "sms" -> go(ctx, Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + a.arg(0).replace(Regex("[^\\d+*#]"), ""))).putExtra("sms_body", a.arg(1)))
-        "open" -> openApp(ctx, a.arg(0))
+        "open" -> openApp(ctx, a.arg(0)) || (settingsAction(a.arg(0)) != null && openSettings(ctx, a.arg(0)))
         "agent" -> startAgent(ctx, a.arg(0))
+        "settings" -> openSettings(ctx, a.arg(0))
         "url" -> go(ctx, Intent(Intent.ACTION_VIEW, Uri.parse(a.arg(0))))
         "map" -> go(ctx, Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(a.arg(0)))))
         "search" -> go(ctx, Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(a.arg(0)))))
@@ -127,6 +130,40 @@ object AgentActions {
         }
         svc.start(goal)
         return true
+    }
+
+    /** The system settings page for a word like "wifi", "واي فاي" or "الإشعارات"; null when it is not about settings. */
+    private fun settingsAction(key: String): String? {
+        val k = key.lowercase()
+        fun has(vararg w: String) = w.any { k.contains(it) }
+        return when {
+            has("wifi", "wi-fi", "واي", "وايفاي", "وای") -> android.provider.Settings.ACTION_WIFI_SETTINGS
+            has("bluetooth", "بلوتوث", "بلوتث") -> android.provider.Settings.ACTION_BLUETOOTH_SETTINGS
+            has("airplane", "طيران") -> android.provider.Settings.ACTION_AIRPLANE_MODE_SETTINGS
+            has("hotspot", "هوت سبوت", "هوتسبوت", "نقطة اتصال", "نقطة الاتصال") -> android.provider.Settings.ACTION_WIRELESS_SETTINGS
+            has("mobiledata", "mobile data", "بيانات", "شبكة") -> android.provider.Settings.ACTION_NETWORK_OPERATOR_SETTINGS
+            has("battery", "بطاري") -> android.provider.Settings.ACTION_BATTERY_SAVER_SETTINGS
+            has("location", "gps", "موقع") -> android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS
+            has("sound", "volume", "صوت", "رنين") -> android.provider.Settings.ACTION_SOUND_SETTINGS
+            has("display", "brightness", "شاشة", "سطوع", "إضاءة", "اضاءة") -> android.provider.Settings.ACTION_DISPLAY_SETTINGS
+            has("notification", "اشعار", "إشعار") -> if (android.os.Build.VERSION.SDK_INT >= 26) android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS else android.provider.Settings.ACTION_SETTINGS
+            has("apps", "تطبيقات") -> android.provider.Settings.ACTION_APPLICATION_SETTINGS
+            has("security", "أمان", "امان") -> android.provider.Settings.ACTION_SECURITY_SETTINGS
+            has("accessib", "وصول", "امكانية", "إمكانية") -> android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS
+            has("storage", "تخزين") -> android.provider.Settings.ACTION_INTERNAL_STORAGE_SETTINGS
+            has("date", "time", "تاريخ", "وقت") -> android.provider.Settings.ACTION_DATE_SETTINGS
+            has("language", "لغة", "لغات") -> android.provider.Settings.ACTION_LOCALE_SETTINGS
+            has("nfc") -> android.provider.Settings.ACTION_NFC_SETTINGS
+            has("main", "settings", "إعدادات", "اعدادات") -> android.provider.Settings.ACTION_SETTINGS
+            else -> null
+        }
+    }
+
+    private fun openSettings(ctx: Context, key: String): Boolean {
+        val action = settingsAction(key) ?: android.provider.Settings.ACTION_SETTINGS
+        val i = Intent(action)
+        if (action == android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS) i.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+        return go(ctx, i) || go(ctx, Intent(android.provider.Settings.ACTION_SETTINGS))
     }
 
     private fun norm(s: String) = s.lowercase().replace(Regex("\\s+"), "")
