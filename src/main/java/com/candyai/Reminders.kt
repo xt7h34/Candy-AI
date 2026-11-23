@@ -131,6 +131,6 @@ class ReminderReceiver : BroadcastReceiver() {
 
 class ReminderBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Intent.ACTION_BOOT_COMPLETED) Reminders.restore(context)
+        if (intent.action == Intent.ACTION_BOOT_COMPLETED) { Reminders.restore(context); HomeGeo.register(context) }
     }
 }

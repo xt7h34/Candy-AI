@@ -230,4 +230,20 @@
     <string name="artifact_rename">Rename</string>
     <string name="artifact_delete_title">Delete this work?</string>
     <string name="artifact_delete_body">It and all its versions will be deleted for good.</string>
+    <string name="home_title">Home location</string>
+    <string name="home_desc">Candy will remind you when you leave home. Your home location is kept on your phone only and is never sent to anyone.</string>
+    <string name="home_use_here">Use my current location as home</string>
+    <string name="home_update_here">Update home to my current location</string>
+    <string name="home_set">✓ Home is set</string>
+    <string name="home_failed">I could not find your location. Turn on location (GPS), allow Candy to use it and try again.</string>
+    <string name="home_need_bg">So Candy can remind you while the app is closed, open Settings → Permissions → Location and choose \"Allow all the time\".</string>
+    <string name="home_open_settings">Open settings</string>
+    <string name="home_radius">Range: %1$d m</string>
+    <string name="home_radius_hint">A smaller range is more precise, but it can be late or miss sometimes. 100 m or more works best.</string>
+    <string name="home_done">Done</string>
+    <string name="leave_remind">Remind me when I leave home</string>
+    <string name="leave_on">On</string>
+    <string name="leave_off">Turn on</string>
+    <string name="leave_home_edit">Home location and range</string>
+    <string name="leave_notif_body">Before you go far: %1$s</string>
 </resources>

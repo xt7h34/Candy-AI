@@ -100,6 +100,7 @@ fun SugarNoteScreen(onBack: () -> Unit, startNew: Boolean = false) {
             error = null
             SugarWidget.save(ctx, list)
             Reminders.sync(ctx, list)
+            HomeGeo.sync(ctx, list)
             // notes Candy has not read yet: she looks for an upcoming event, once per note
             if (ask == null) {
                 for (n in list.filter { !it.analyzed && it.id !in analyzed }.take(4)) {
@@ -155,12 +156,13 @@ fun SugarNoteScreen(onBack: () -> Unit, startNew: Boolean = false) {
         NoteEditor(
             note = n,
             onDismiss = { creating = false; editing = null },
-            onSave = { text, color, pinned, remindAt ->
+            onSave = { text, color, pinned, remindAt, leave ->
                 creating = false; editing = null
-                if (remindAt != null && remindAt != n?.remindAt) ensureNotifications()
+                if ((remindAt != null && remindAt != n?.remindAt) || leave) ensureNotifications()
                 scope.launch {
                     try {
-                        if (n == null) Api.createNote(text, color, pinned, remindAt) else Api.updateNote(n.id, text, color, pinned, remindAt)
+                        val id = if (n == null) Api.createNote(text, color, pinned, remindAt) else { Api.updateNote(n.id, text, color, pinned, remindAt); n.id }
+                        HomeGeo.setWaiting(ctx, id, Reminders.title(text), leave)
                     } catch (e: Exception) {
                         error = errorMessage(ctx, e)
                     }
@@ -242,6 +244,10 @@ private fun NoteCard(n: Note, number: Int, onClick: () -> Unit) {
                     Spacer(Modifier.height(8.dp))
                     Text("🔔 " + formatWhen(n.remindAt), color = NoteInk.copy(alpha = 0.6f), fontSize = 11.sp)
                 }
+                if (HomeGeo.isWaiting(androidx.compose.ui.platform.LocalContext.current, n.id)) {
+                    Spacer(Modifier.height(6.dp))
+                    Text("📍 " + stringResource(R.string.leave_remind), color = NoteInk.copy(alpha = 0.6f), fontSize = 11.sp)
+                }
             }
             if (n.pinned) Text("★", color = pin, fontSize = 14.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 8.dp))
         }
@@ -262,7 +268,7 @@ private fun NoteCard(n: Note, number: Int, onClick: () -> Unit) {
 }
 
 @Composable
-private fun NoteEditor(note: Note?, onDismiss: () -> Unit, onSave: (String, Int, Boolean, Long?) -> Unit, onDelete: (() -> Unit)?) {
+private fun NoteEditor(note: Note?, onDismiss: () -> Unit, onSave: (String, Int, Boolean, Long?, Boolean) -> Unit, onDelete: (() -> Unit)?) {
     val ctx = LocalContext.current
     val c = LocalCandy.current
     var text by remember { mutableStateOf(note?.text ?: "") }
@@ -270,6 +276,9 @@ private fun NoteEditor(note: Note?, onDismiss: () -> Unit, onSave: (String, Int,
     var pinned by remember { mutableStateOf(note?.pinned ?: false) }
     var remindAt by remember { mutableStateOf(note?.remindAt?.takeIf { it > System.currentTimeMillis() }) }
     var picking by remember { mutableStateOf(false) }
+    var leave by remember { mutableStateOf(note != null && HomeGeo.isWaiting(ctx, note.id)) }
+    var setup by remember { mutableStateOf(false) }
+    if (setup) HomeSetupDialog(onDismiss = { setup = false }, onSaved = { setup = false; leave = true })
     if (picking) DateTimePicker(remindAt, onPicked = { remindAt = it; picking = false }, onDismiss = { picking = false })
 
     AlertDialog(
@@ -314,10 +323,21 @@ private fun NoteEditor(note: Note?, onDismiss: () -> Unit, onSave: (String, Int,
                     }
                 }
                 if (remindAt != null) TextButton(onClick = { remindAt = null }) { Text(stringResource(R.string.sugar_reminder_clear), color = NoteInk.copy(alpha = 0.7f)) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("📍", fontSize = 15.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.leave_remind), color = NoteInk, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    TextButton(onClick = {
+                        if (leave) leave = false
+                        else if (HomeGeo.home(ctx) == null || !HomeGeo.hasFine(ctx) || !HomeGeo.hasBackground(ctx)) setup = true
+                        else leave = true
+                    }) { Text(stringResource(if (leave) R.string.leave_on else R.string.leave_off), color = NoteInk, fontWeight = FontWeight.Bold) }
+                }
+                if (leave) TextButton(onClick = { setup = true }) { Text(stringResource(R.string.leave_home_edit), color = NoteInk.copy(alpha = 0.7f)) }
                 if (onDelete != null) TextButton(onClick = onDelete) { Text(stringResource(R.string.delete), color = Color(0xFFB3261E)) }
             }
         },
-        confirmButton = { TextButton(enabled = text.isNotBlank(), onClick = { onSave(text.trim(), color, pinned, remindAt) }) { Text(stringResource(R.string.save), color = NoteInk, fontWeight = FontWeight.Bold) } },
+        confirmButton = { TextButton(enabled = text.isNotBlank(), onClick = { onSave(text.trim(), color, pinned, remindAt, leave) }) { Text(stringResource(R.string.save), color = NoteInk, fontWeight = FontWeight.Bold) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), color = NoteInk.copy(alpha = 0.7f)) } },
     )
 }

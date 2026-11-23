@@ -232,4 +232,20 @@
     <string name="artifact_rename">تغيير الاسم</string>
     <string name="artifact_delete_title">حذف العمل؟</string>
     <string name="artifact_delete_body">العمل وكل نسخه هيتحذفوا نهائيًا.</string>
+    <string name="home_title">مكان البيت</string>
+    <string name="home_desc">كاندي هتفكّرك لما تخرج من البيت. مكان بيتك بيتحفظ على موبايلك بس ومش بيتبعت لأي حد.</string>
+    <string name="home_use_here">استخدم مكاني الحالي كبيت</string>
+    <string name="home_update_here">حدّث مكان البيت لمكاني الحالي</string>
+    <string name="home_set">✓ البيت متحدد</string>
+    <string name="home_failed">معرفتش أحدد مكانك. شغّل الموقع (GPS) وسمح لكاندي بالوصول له وجرّب تاني.</string>
+    <string name="home_need_bg">عشان كاندي تفكّرك والتطبيق مقفول، افتح الإعدادات ← الأذونات ← الموقع واختار «السماح طول الوقت».</string>
+    <string name="home_open_settings">فتح الإعدادات</string>
+    <string name="home_radius">النطاق: %1$d متر</string>
+    <string name="home_radius_hint">كل ما النطاق أصغر كان أدق، بس ممكن يتأخر أو يفوتك أحيانًا. الأفضل 100 متر أو أكتر.</string>
+    <string name="home_done">تمام</string>
+    <string name="leave_remind">فكّرني لما أخرج من البيت</string>
+    <string name="leave_on">مفعّل</string>
+    <string name="leave_off">تفعيل</string>
+    <string name="leave_home_edit">ضبط مكان البيت والنطاق</string>
+    <string name="leave_notif_body">قبل ما تبعد: %1$s</string>
 </resources>
