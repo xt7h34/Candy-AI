@@ -22,6 +22,8 @@ data class Notebook(val id: String, val name: String, val color: Int, val source
 
 data class Source(val id: String, val name: String, val chars: Int)
 
+data class ArtifactItem(val id: String, val title: String, val type: String, val updatedAt: Long)
+data class ArtifactFull(val id: String, val title: String, val type: String, val lang: String, val current: Int, val content: String, val versions: List<Pair<Int, Long>>)
 data class Project(val id: String, val name: String, val color: Int, val instructions: String, val count: Int, val updatedAt: Long)
 
 /** One message. [n] is the server id; a negative [n] means it was just sent and has no id yet. */
@@ -225,6 +227,31 @@ object Api {
     }
 
     suspend fun deleteSource(id: String) { json("DELETE", "/sources/$id") }
+
+    // ───── artifacts ─────
+    suspend fun artifacts(): List<ArtifactItem> {
+        val arr = json("GET", "/artifacts").getJSONArray("artifacts")
+        return (0 until arr.length()).map {
+            val o = arr.getJSONObject(it)
+            ArtifactItem(o.getString("id"), o.getString("title"), o.optString("type", "code"), o.optLong("updated_at"))
+        }
+    }
+
+    private fun parseArtifact(o: JSONObject): ArtifactFull {
+        val vs = o.optJSONArray("versions")
+        val versions = if (vs == null) emptyList() else (0 until vs.length()).map { vs.getJSONObject(it).let { v -> v.getInt("v") to v.optLong("created_at") } }
+        return ArtifactFull(o.getString("id"), o.getString("title"), o.optString("type", "code"), o.optString("lang", ""), o.optInt("current", 1), o.optString("content", ""), versions)
+    }
+
+    suspend fun artifact(id: String): ArtifactFull = parseArtifact(json("GET", "/artifacts/$id", null, 30000))
+
+    suspend fun artifactVersion(id: String, v: Int): String = json("GET", "/artifacts/$id/versions/$v", null, 30000).optString("content", "")
+
+    suspend fun renameArtifact(id: String, title: String) { json("POST", "/artifacts/$id", JSONObject().put("title", title)) }
+
+    suspend fun restoreArtifact(id: String, v: Int) { json("POST", "/artifacts/$id", JSONObject().put("restore", v)) }
+
+    suspend fun deleteArtifact(id: String) { json("DELETE", "/artifacts/$id") }
 
     // ───── projects ─────
     suspend fun projects(): List<Project> {

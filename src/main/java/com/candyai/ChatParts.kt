@@ -222,7 +222,7 @@ internal fun MemChip(label: String, onClick: () -> Unit) {
     }
 }
 
-internal fun aiPlain(text: String): String = text.replace("**", "")
+internal fun aiPlain(text: String): String = stripArtifacts(text).replace("**", "").trim()
 
 internal fun copyAiText(ctx: Context, text: String) {
     val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager ?: return

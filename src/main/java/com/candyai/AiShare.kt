@@ -42,7 +42,7 @@ private class FaceSpan(private val face: Typeface) : MetricAffectingSpan() {
 /** Same light markdown as the chat: **bold** and "- " lists. */
 private fun snapText(text: String, bold: Typeface): CharSequence {
     val out = SpannableStringBuilder()
-    val lines = text.split("\n")
+    val lines = stripArtifacts(text).split("\n")
     for ((li, raw) in lines.withIndex()) {
         val line = if (raw.startsWith("- ") || raw.startsWith("* ")) "• " + raw.substring(2) else raw
         var i = 0

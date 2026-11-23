@@ -142,6 +142,18 @@ internal fun copyRawText(ctx: Context, text: String) {
 
 @Composable
 internal fun AiMarkdown(text: String) {
+    val parts = remember(text) { splitArtifacts(text) }
+    if (parts.size == 1 && parts[0] is ArtPart.Text) { AiMarkdownText(text); return }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        for (p in parts) when (p) {
+            is ArtPart.Text -> if (p.s.isNotBlank()) AiMarkdownText(p.s.trim())
+            is ArtPart.Card -> ArtifactCard(p.id, p.type, p.title)
+        }
+    }
+}
+
+@Composable
+private fun AiMarkdownText(text: String) {
     val cs = MaterialTheme.colorScheme
     val boldSpan = SpanStyle(fontWeight = FontWeight.Bold)
     val codeSpan = SpanStyle(fontFamily = FontFamily.Monospace, background = cs.onSurface.copy(alpha = 0.14f))

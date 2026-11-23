@@ -212,4 +212,24 @@
     <string name="battery_body">بعض الموبايلات بتقفل التطبيقات في الخلفية لتوفير البطارية فالتذكير ممكن يتأخر. اسمح لكاندي تشتغل من غير قيود البطارية.</string>
     <string name="battery_allow">السماح</string>
     <string name="battery_later">مش دلوقتي</string>
+    <string name="artifacts">أرتيفاكت</string>
+    <string name="artifacts_empty">مفيش أعمال لسه. اطلب من كاندي صفحة أو لعبة أو أداة أو رسمة أو كود، وهتلاقيها هنا.</string>
+    <string name="artifact_type_html">صفحة تفاعلية</string>
+    <string name="artifact_type_svg">رسمة</string>
+    <string name="artifact_type_code">كود</string>
+    <string name="artifact_tap">اضغط للفتح</string>
+    <string name="artifact_preview">معاينة</string>
+    <string name="artifact_code">الكود</string>
+    <string name="artifact_copy">نسخ</string>
+    <string name="artifact_save">حفظ كملف</string>
+    <string name="artifact_saved">اتحفظ</string>
+    <string name="artifact_share">مشاركة</string>
+    <string name="artifact_versions">النسخ</string>
+    <string name="artifact_version_n">نسخة %1$d</string>
+    <string name="artifact_old_version">بتشوف نسخة %1$d (قديمة)</string>
+    <string name="artifact_back_current">الحالية</string>
+    <string name="artifact_restore">استرجاع</string>
+    <string name="artifact_rename">تغيير الاسم</string>
+    <string name="artifact_delete_title">حذف العمل؟</string>
+    <string name="artifact_delete_body">العمل وكل نسخه هيتحذفوا نهائيًا.</string>
 </resources>

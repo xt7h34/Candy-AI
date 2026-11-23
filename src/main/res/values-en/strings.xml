@@ -210,4 +210,24 @@
     <string name="battery_body">Some phones close background apps to save battery, so a reminder can be late. Allow Candy to run without battery limits.</string>
     <string name="battery_allow">Allow</string>
     <string name="battery_later">Not now</string>
+    <string name="artifacts">Artifacts</string>
+    <string name="artifacts_empty">Nothing here yet. Ask Candy for a page, a game, a tool, a drawing or some code, and it will show up here.</string>
+    <string name="artifact_type_html">Interactive page</string>
+    <string name="artifact_type_svg">Drawing</string>
+    <string name="artifact_type_code">Code</string>
+    <string name="artifact_tap">Tap to open</string>
+    <string name="artifact_preview">Preview</string>
+    <string name="artifact_code">Code</string>
+    <string name="artifact_copy">Copy</string>
+    <string name="artifact_save">Save as file</string>
+    <string name="artifact_saved">Saved</string>
+    <string name="artifact_share">Share</string>
+    <string name="artifact_versions">Versions</string>
+    <string name="artifact_version_n">Version %1$d</string>
+    <string name="artifact_old_version">You are viewing version %1$d (old)</string>
+    <string name="artifact_back_current">Current</string>
+    <string name="artifact_restore">Restore</string>
+    <string name="artifact_rename">Rename</string>
+    <string name="artifact_delete_title">Delete this work?</string>
+    <string name="artifact_delete_body">It and all its versions will be deleted for good.</string>
 </resources>

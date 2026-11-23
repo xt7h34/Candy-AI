@@ -39,6 +39,8 @@ class MainActivity : ComponentActivity() {
     private var pendingConv by mutableStateOf<String?>(null)
     // the home-screen widget asks for SugarNote: "list" or "new"
     private var pendingSugar by mutableStateOf<String?>(null)
+    // an artifact card was tapped (in the edge panel, say): open it
+    private var pendingArtifact by mutableStateOf<String?>(null)
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(Lang.wrap(newBase))
@@ -52,6 +54,7 @@ class MainActivity : ComponentActivity() {
         // not after a restart (language change): the intent still carries the old request
         if (savedInstanceState == null) pendingConv = intent?.getStringExtra("open_conv")
         if (savedInstanceState == null) pendingSugar = intent?.getStringExtra("open_sugar")
+        if (savedInstanceState == null) pendingArtifact = intent?.getStringExtra("open_artifact")
         setContent {
             val dark = rememberDark()
             // the bars' icons follow the app's theme, which can differ from the phone's
@@ -67,7 +70,7 @@ class MainActivity : ComponentActivity() {
                     UpdatePrompt()
                     var loggedIn by remember { mutableStateOf(Store.loginDone) }
                     if (loggedIn) {
-                        CandyApp(pendingConv, { pendingConv = null }, pendingSugar) { pendingSugar = null }
+                        CandyApp(pendingConv, { pendingConv = null }, pendingSugar, { pendingSugar = null }, pendingArtifact) { pendingArtifact = null }
                     } else {
                         val scope = rememberCoroutineScope()
                         var googleBusy by remember { mutableStateOf(false) }
@@ -126,12 +129,13 @@ class MainActivity : ComponentActivity() {
         setIntent(intent)
         intent.getStringExtra("open_conv")?.let { pendingConv = it }
         intent.getStringExtra("open_sugar")?.let { pendingSugar = it }
+        intent.getStringExtra("open_artifact")?.let { pendingArtifact = it }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}, pendingSugar: String? = null, onSugarHandled: () -> Unit = {}) {
+fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}, pendingSugar: String? = null, onSugarHandled: () -> Unit = {}, pendingArtifact: String? = null, onArtifactHandled: () -> Unit = {}) {
     val c = LocalCandy.current
     val scope = rememberCoroutineScope()
     val appDir = LocalLayoutDirection.current
@@ -146,6 +150,9 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}, pen
     var notellaOpen by rememberSaveable { mutableStateOf(false) }
     var sugarOpen by rememberSaveable { mutableStateOf(false) }
     var sugarNew by remember { mutableStateOf(false) }
+    var artifactsOpen by rememberSaveable { mutableStateOf(false) }
+    var viewArtifact by rememberSaveable { mutableStateOf<String?>(null) }
+    var artifactsKey by remember { mutableIntStateOf(0) }
     var activeId by rememberSaveable { mutableStateOf<String?>(null) }
     var chatKey by remember { mutableIntStateOf(0) }
     var listKey by remember { mutableIntStateOf(0) }
@@ -160,6 +167,8 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}, pen
         projectsOpen = false
         notellaOpen = false
         sugarOpen = false
+        artifactsOpen = false
+        viewArtifact = null
         startId = id
         activeId = id
         chatKey++
@@ -181,9 +190,17 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}, pen
         }
     }
 
+    LaunchedEffect(pendingArtifact) {
+        if (pendingArtifact != null) {
+            viewArtifact = pendingArtifact
+            onArtifactHandled()
+        }
+    }
+
     // back closes the drawer first; with nothing open it leaves the app
     BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.close() } }
 
+    CompositionLocalProvider(LocalOpenArtifact provides { aid: String -> viewArtifact = aid }) {
     Box(Modifier.fillMaxSize().background(c.bg)) {
         // the drawer docks to the start edge of the layout direction around it, so that direction picks the side;
         // everything inside is put back to the app's own direction
@@ -205,6 +222,10 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}, pen
                             onSugar = {
                                 sugarNew = false
                                 sugarOpen = true
+                                scope.launch { drawerState.close() }
+                            },
+                            onArtifacts = {
+                                artifactsOpen = true
                                 scope.launch { drawerState.close() }
                             },
                             onNotella = {
@@ -283,11 +304,20 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}, pen
                 onNewChat = { openChat(null, null, it) },
             )
         }
+        if (artifactsOpen) {
+            ArtifactsScreen(onBack = { artifactsOpen = false }, onOpen = { viewArtifact = it }, reloadKey = artifactsKey)
+        }
+        viewArtifact?.let { aid ->
+            Box(Modifier.fillMaxSize().background(c.bg)) {
+                ArtifactViewer(aid, onBack = { viewArtifact = null }, onChanged = { artifactsKey++ })
+            }
+        }
         if (memoryOpen) {
             BackHandler { memoryOpen = false }
             Box(Modifier.fillMaxSize().background(c.bg)) {
                 MemoryScreen(onBack = { memoryOpen = false })
             }
         }
+    }
     }
 }
