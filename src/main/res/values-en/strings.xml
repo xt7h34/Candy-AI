@@ -296,4 +296,5 @@
     <string name="agent_g_phone">Calls and messages</string>
     <string name="agent_g_open">Opening apps, links and settings</string>
     <string name="agent_g_agent">Screen control</string>
+    <string name="research_title">Candy is researching</string>
 </resources>

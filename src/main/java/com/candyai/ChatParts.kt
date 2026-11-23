@@ -303,3 +303,30 @@ internal fun AiDayChip(label: String) {
     }
 }
 
+
+/** What Candy is doing while she researches: the finished steps with a tick, and the current one with a spinner. */
+@Composable
+internal fun ResearchCard(steps: List<String>) {
+    val c = MaterialTheme.colorScheme
+    androidx.compose.material3.Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = c.secondaryContainer.copy(alpha = 0.65f),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("🔎 " + stringResource(R.string.research_title), style = MaterialTheme.typography.labelLarge, color = c.onSecondaryContainer, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+            steps.forEachIndexed { i, s ->
+                val last = i == steps.lastIndex
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (last) androidx.compose.material3.CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp, color = c.onSecondaryContainer)
+                    else Text("✓", style = MaterialTheme.typography.labelMedium, color = c.onSecondaryContainer.copy(alpha = 0.6f))
+                    Text(
+                        s, style = MaterialTheme.typography.labelMedium,
+                        color = c.onSecondaryContainer.copy(alpha = if (last) 1f else 0.6f),
+                        maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}

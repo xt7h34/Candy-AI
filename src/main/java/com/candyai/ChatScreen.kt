@@ -160,6 +160,7 @@ fun ChatScreen(
     // notes Candy wrote in her last reply: she then asks when to remind about them
     var reminderAsk by remember { mutableStateOf<ReminderAsk?>(null) }
     var agentActions by remember { mutableStateOf<List<AgentAction>>(emptyList()) }
+    var research by remember { mutableStateOf<List<String>>(emptyList()) }
     var shareFor by remember { mutableStateOf<AiMsg?>(null) }
     var jobId by remember { mutableStateOf<String?>(null) }
     var talkTick by remember { mutableStateOf(0) }
@@ -234,7 +235,9 @@ fun ChatScreen(
                 }
             }
             since = p.next
+            if (p.progress.isNotEmpty()) research = p.progress
             if (p.status != "running") {
+                research = emptyList()
                 val fin = p.final
                 if (idx >= 0) {
                     val old = msgs[idx]
@@ -676,6 +679,7 @@ fun ChatScreen(
                         }
                     }
                 }
+                if (research.isNotEmpty() && sending) item(key = "research") { ResearchCard(research) }
                 if ((sending || listening) && (msgs.lastOrNull()?.mine != false)) item(key = "typing") {
                     AiTypingBubble(stringResource(if (listening) R.string.ai_listening else R.string.ai_thinking))
                 }

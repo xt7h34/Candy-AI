@@ -66,6 +66,8 @@ class PollResult(
     val notes: List<String> = emptyList(),
     /** Phone actions Candy prepared (alarm, call...). The app asks the person before doing any. */
     val actions: List<AgentAction> = emptyList(),
+    /** Steps of a research that is running (shown as a card, not as text). */
+    val progress: List<String> = emptyList(),
 )
 
 class VoiceStatus(val ttsOn: Boolean, val ttsLeft: Int, val ttsLimit: Int, val sttOn: Boolean)
@@ -359,6 +361,7 @@ object Api {
             messageId = j.optLong("message_id", 0L),
             atts = attRefs(j.optJSONArray("attachments")),
             notes = j.optJSONArray("notes")?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList(),
+            progress = j.optJSONArray("progress")?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList(),
             actions = j.optJSONArray("actions")?.let { arr ->
                 (0 until arr.length()).mapNotNull { k ->
                     val o = arr.optJSONObject(k) ?: return@mapNotNull null
