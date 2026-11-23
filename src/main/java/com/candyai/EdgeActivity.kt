@@ -94,6 +94,7 @@ fun EdgePanel(onClose: () -> Unit, onOpenFull: (String?) -> Unit, onReply: (Int)
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val chat = remember { SeeChat(ctx, scope, speakReplies = voice) }
+    if (chat.actions.isNotEmpty()) ActionConfirm(chat.actions) { chat.actions = emptyList() }
 
     // came back from "screenshot": the shot is attached (and translated right away if that is what was asked)
     LaunchedEffect(Unit) {

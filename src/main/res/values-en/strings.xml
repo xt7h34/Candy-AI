@@ -246,4 +246,20 @@
     <string name="leave_off">Turn on</string>
     <string name="leave_home_edit">Home location and range</string>
     <string name="leave_notif_body">Before you go far: %1$s</string>
+    <string name="agent_ask_title">Candy wants to do this:</string>
+    <string name="agent_do">Do it</string>
+    <string name="agent_skip">No</string>
+    <string name="agent_failed">I could not do that on your phone.</string>
+    <string name="agent_alarm">⏰ Set an alarm for %1$s</string>
+    <string name="agent_timer">⏳ Start a %1$s timer</string>
+    <string name="agent_calendar">📅 Add \"%1$s\" to your calendar (%2$s)</string>
+    <string name="agent_call">📞 Open the dialer with %1$s</string>
+    <string name="agent_sms">💬 Prepare a message to %1$s: \"%2$s\"</string>
+    <string name="agent_open">📲 Open %1$s</string>
+    <string name="agent_url">🌐 Open the link %1$s</string>
+    <string name="agent_map">🗺️ Show \"%1$s\" on the map</string>
+    <string name="agent_search">🔎 Search for \"%1$s\"</string>
+    <string name="agent_dur_h">%1$d hours</string>
+    <string name="agent_dur_m">%1$d minutes</string>
+    <string name="agent_dur_s">%1$d seconds</string>
 </resources>

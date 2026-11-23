@@ -60,6 +60,8 @@ class PollResult(
     val atts: List<AttRef> = emptyList(),
     /** Ids of SugarNote notes Candy wrote in this reply. */
     val notes: List<String> = emptyList(),
+    /** Phone actions Candy prepared (alarm, call...). The app asks the person before doing any. */
+    val actions: List<AgentAction> = emptyList(),
 )
 
 class VoiceStatus(val ttsOn: Boolean, val ttsLeft: Int, val ttsLimit: Int, val sttOn: Boolean)
@@ -337,6 +339,13 @@ object Api {
             messageId = j.optLong("message_id", 0L),
             atts = attRefs(j.optJSONArray("attachments")),
             notes = j.optJSONArray("notes")?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList(),
+            actions = j.optJSONArray("actions")?.let { arr ->
+                (0 until arr.length()).mapNotNull { k ->
+                    val o = arr.optJSONObject(k) ?: return@mapNotNull null
+                    val ar = o.optJSONArray("args")
+                    AgentAction(o.optString("type"), if (ar == null) emptyList() else (0 until ar.length()).map { ar.optString(it) })
+                }
+            } ?: emptyList(),
         )
     }
 

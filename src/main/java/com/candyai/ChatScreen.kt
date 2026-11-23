@@ -159,6 +159,7 @@ fun ChatScreen(
     var error by remember { mutableStateOf("") }
     // notes Candy wrote in her last reply: she then asks when to remind about them
     var reminderAsk by remember { mutableStateOf<ReminderAsk?>(null) }
+    var agentActions by remember { mutableStateOf<List<AgentAction>>(emptyList()) }
     var shareFor by remember { mutableStateOf<AiMsg?>(null) }
     var jobId by remember { mutableStateOf<String?>(null) }
     var talkTick by remember { mutableStateOf(0) }
@@ -251,6 +252,7 @@ fun ChatScreen(
                     needReload = true   // nothing arrived: show what the server kept
                 }
                 if (p.status == "error") error = ctx.getString(R.string.err_reply)
+                if (p.actions.isNotEmpty()) agentActions = p.actions
                 if (p.notes.isNotEmpty()) {
                     val ids = p.notes
                     scope.launch {
@@ -784,6 +786,7 @@ fun ChatScreen(
     }
 
     reminderAsk?.let { a -> NoteReminderFlow(a, onFinished = { reminderAsk = null }) }
+    if (agentActions.isNotEmpty()) ActionConfirm(agentActions) { agentActions = emptyList() }
 
     shareFor?.let { target ->
         AlertDialog(

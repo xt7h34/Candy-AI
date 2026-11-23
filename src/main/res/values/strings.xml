@@ -248,4 +248,20 @@
     <string name="leave_off">تفعيل</string>
     <string name="leave_home_edit">ضبط مكان البيت والنطاق</string>
     <string name="leave_notif_body">قبل ما تبعد: %1$s</string>
+    <string name="agent_ask_title">كاندي عايزة تنفّذ:</string>
+    <string name="agent_do">نفّذ</string>
+    <string name="agent_skip">لأ</string>
+    <string name="agent_failed">معرفتش أنفّذها على موبايلك.</string>
+    <string name="agent_alarm">⏰ ضبط منبّه الساعة %1$s</string>
+    <string name="agent_timer">⏳ ضبط مؤقّت %1$s</string>
+    <string name="agent_calendar">📅 إضافة «%1$s» في التقويم (%2$s)</string>
+    <string name="agent_call">📞 فتح الاتصال بالرقم %1$s</string>
+    <string name="agent_sms">💬 تجهيز رسالة للرقم %1$s: «%2$s»</string>
+    <string name="agent_open">📲 فتح تطبيق %1$s</string>
+    <string name="agent_url">🌐 فتح الرابط %1$s</string>
+    <string name="agent_map">🗺️ فتح «%1$s» على الخريطة</string>
+    <string name="agent_search">🔎 بحث عن «%1$s»</string>
+    <string name="agent_dur_h">%1$d ساعة</string>
+    <string name="agent_dur_m">%1$d دقيقة</string>
+    <string name="agent_dur_s">%1$d ثانية</string>
 </resources>

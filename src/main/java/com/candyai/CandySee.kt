@@ -100,6 +100,8 @@ class SeeChat(private val ctx: Context, private val scope: CoroutineScope, var s
     val pending = mutableStateListOf<Pending>()
     /** True while a screenshot is being taken: the panel hides itself so it is not in the picture. */
     var capturing by mutableStateOf(false)
+    /** Phone actions Candy prepared in the last reply; the panel asks before doing them. */
+    var actions by mutableStateOf<List<AgentAction>>(emptyList())
     private var jobId: String? = null
     private var drawn: List<AttRef> = emptyList()
     private var messageId = 0L
@@ -128,6 +130,7 @@ class SeeChat(private val ctx: Context, private val scope: CoroutineScope, var s
                 val fin = p.final
                 if (!fin.isNullOrBlank()) reply = fin
                 if (p.atts.isNotEmpty()) drawn = p.atts
+                if (p.actions.isNotEmpty()) actions = p.actions
                 if (p.messageId > 0) messageId = p.messageId
                 if (p.status == "error") error = ctx.getString(R.string.err_reply)
                 break

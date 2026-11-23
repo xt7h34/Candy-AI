@@ -243,6 +243,7 @@ fun CtsScreen(shot: Bitmap, onClose: () -> Unit, onOpenFull: (String?) -> Unit) 
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val chat = remember { SeeChat(ctx, scope, speakReplies = false, convTitle = ctx.getString(R.string.cts_conv_title)) }
+    if (chat.actions.isNotEmpty()) ActionConfirm(chat.actions) { chat.actions = emptyList() }
     val img = remember(shot) { shot.asImageBitmap() }
 
     val stroke = remember { ArrayList<Offset>() }                   // what the finger is drawing (not observable: redraws are driven by [tick])
