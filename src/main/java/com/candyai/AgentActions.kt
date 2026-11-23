@@ -6,6 +6,17 @@ import android.net.Uri
 import android.provider.AlarmClock
 import android.provider.CalendarContract
 import android.widget.Toast
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Checkbox
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -45,6 +56,17 @@ object AgentActions {
     } catch (_: Exception) { null }
 
     private fun isHttps(s: String) = Regex("^https://\\S+$", RegexOption.IGNORE_CASE).matches(s.trim())
+
+    /** The kinds the person can allow without asking (Settings → agent). */
+    val GROUPS = listOf("clock", "calendar", "phone", "open", "agent")
+
+    fun group(a: AgentAction): String = when (a.type) {
+        "alarm", "timer" -> "clock"
+        "calendar" -> "calendar"
+        "call", "sms" -> "phone"
+        "agent" -> "agent"
+        else -> "open"
+    }
 
     /** Only actions with usable details are shown. */
     fun valid(a: AgentAction): Boolean = when (a.type) {
@@ -180,31 +202,46 @@ object AgentActions {
     }
 }
 
-/** The confirmation card: one action at a time, always asked (no "always allow" yet). */
+/** The confirmation card: one action at a time. A kind the person allowed with "don't ask again" runs straight away. */
 @Composable
 fun ActionConfirm(actions: List<AgentAction>, onDone: () -> Unit) {
     val ctx = LocalContext.current
     val c = LocalCandy.current
     val list = remember(actions) { actions.filter { AgentActions.valid(it) } }
-    var i by remember(actions) { mutableIntStateOf(0) }
-    if (list.isEmpty()) {
-        LaunchedEffect(actions) { onDone() }
-        return
+    val allowed = remember(actions) { Store.autoActions }
+    val auto = remember(actions) { list.filter { AgentActions.group(it) in allowed } }
+    val ask = remember(actions) { list.filter { AgentActions.group(it) !in allowed } }
+    LaunchedEffect(actions) {
+        for (a in auto) if (!AgentActions.run(ctx, a)) Toast.makeText(ctx, R.string.agent_failed, Toast.LENGTH_SHORT).show()
+        if (ask.isEmpty()) onDone()
     }
-    val a = list[i]
-    fun next() { if (i + 1 < list.size) i++ else onDone() }
+    if (ask.isEmpty()) return
+    var i by remember(actions) { mutableIntStateOf(0) }
+    var dontAsk by remember(actions, i) { mutableStateOf(false) }
+    val a = ask[i]
+    fun next() { if (i + 1 < ask.size) i++ else onDone() }
     AlertDialog(
         onDismissRequest = { onDone() },
         containerColor = c.surface,
         title = { Text(stringResource(R.string.agent_ask_title), color = c.text) },
         text = {
-            Text(
-                AgentActions.describe(ctx, a), color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
-                style = TextStyle(textDirection = TextDirection.Content),
-            )
+            Column {
+                Text(
+                    AgentActions.describe(ctx, a), color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
+                    style = TextStyle(textDirection = TextDirection.Content),
+                )
+                Row(
+                    Modifier.padding(top = 14.dp).clip(RoundedCornerShape(10.dp)).clickable { dontAsk = !dontAsk },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(checked = dontAsk, onCheckedChange = { dontAsk = it })
+                    Text(stringResource(R.string.agent_dont_ask), color = c.subtext, fontSize = 13.sp)
+                }
+            }
         },
         confirmButton = {
             TextButton(onClick = {
+                if (dontAsk) Store.autoActions = Store.autoActions + AgentActions.group(a)
                 if (!AgentActions.run(ctx, a)) Toast.makeText(ctx, R.string.agent_failed, Toast.LENGTH_SHORT).show()
                 next()
             }) { Text(stringResource(R.string.agent_do), color = c.userBubble, fontWeight = FontWeight.Bold) }

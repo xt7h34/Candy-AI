@@ -48,6 +48,11 @@ object Store {
         get() = sp.getBoolean("login_done", false)
         set(v) { sp.edit().putBoolean("login_done", v).apply() }
 
+    /** Kinds of phone action Candy may do without asking first (see AgentActions.GROUPS). Sensitive steps inside screen control still ask. */
+    var autoActions: Set<String>
+        get() = sp.getStringSet("auto_actions", emptySet())?.toSet() ?: emptySet()
+        set(v) { sp.edit().putStringSet("auto_actions", v.toSet()).apply() }
+
     /** Circle to Search (the assistant gesture opens a frozen screenshot to draw on) is switched on. */
     var ctsOn: Boolean
         get() = sp.getBoolean("cts_on", true)

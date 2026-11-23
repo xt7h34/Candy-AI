@@ -290,4 +290,12 @@
     <string name="agent_hide_notif_hint">إشعار «كاندي على شاشتك» بتطلبه أندرويد طول ما كاندي العايمة شغّالة. تقدر تخفيه من إعدادات القناة.</string>
     <string name="agent_hide_notif">إخفاء إشعار كاندي</string>
     <string name="agent_settings_open">⚙️ فتح إعدادات «%1$s»</string>
+    <string name="agent_dont_ask">متسألنيش تاني على النوع ده</string>
+    <string name="agent_auto_title">التنفيذ من غير سؤال</string>
+    <string name="agent_auto_hint">الأنواع اللي هتشغّلها كاندي على طول من غير كارت تأكيد. الخطوات الحساسة جوه التحكم في الشاشة (إرسال، دفع، شراء، حذف) بتسأل دايمًا مهما كان الاختيار.</string>
+    <string name="agent_g_clock">منبّه ومؤقّت</string>
+    <string name="agent_g_calendar">أحداث التقويم</string>
+    <string name="agent_g_phone">الاتصال والرسائل</string>
+    <string name="agent_g_open">فتح تطبيقات وروابط وإعدادات</string>
+    <string name="agent_g_agent">التحكم في الشاشة</string>
 </resources>

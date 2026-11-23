@@ -288,4 +288,12 @@
     <string name="agent_hide_notif_hint">Android requires the \"Candy is on your screen\" notification while floating Candy runs. You can hide it from the channel settings.</string>
     <string name="agent_hide_notif">Hide Candy\'s notification</string>
     <string name="agent_settings_open">⚙️ Open \"%1$s\" settings</string>
+    <string name="agent_dont_ask">Do not ask again for this kind</string>
+    <string name="agent_auto_title">Do without asking</string>
+    <string name="agent_auto_hint">The kinds Candy runs straight away, with no confirmation card. Sensitive steps inside screen control (send, pay, buy, delete) always ask, whatever you pick.</string>
+    <string name="agent_g_clock">Alarms and timers</string>
+    <string name="agent_g_calendar">Calendar events</string>
+    <string name="agent_g_phone">Calls and messages</string>
+    <string name="agent_g_open">Opening apps, links and settings</string>
+    <string name="agent_g_agent">Screen control</string>
 </resources>

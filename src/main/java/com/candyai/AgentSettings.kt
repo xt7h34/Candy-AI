@@ -5,8 +5,10 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -15,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -67,6 +70,20 @@ fun AgentSettingsCard() {
                 stringResource(if (it) R.string.agent_assistant_on else R.string.agent_assistant_off), color = c.text, fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 12.dp),
             )
+        }
+
+        // "ask once, then always": the kinds Candy may do without asking
+        var auto by remember { mutableStateOf(Store.autoActions) }
+        Text(stringResource(R.string.agent_auto_title), color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp))
+        Text(stringResource(R.string.agent_auto_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 4.dp))
+        for (g in AgentActions.GROUPS) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(when (g) { "clock" -> R.string.agent_g_clock; "calendar" -> R.string.agent_g_calendar; "phone" -> R.string.agent_g_phone; "agent" -> R.string.agent_g_agent; else -> R.string.agent_g_open }),
+                    color = c.text, fontSize = 14.sp, modifier = Modifier.weight(1f),
+                )
+                Switch(checked = g in auto, onCheckedChange = { on -> auto = if (on) auto + g else auto - g; Store.autoActions = auto })
+            }
         }
 
         if (Build.VERSION.SDK_INT >= 26) {
