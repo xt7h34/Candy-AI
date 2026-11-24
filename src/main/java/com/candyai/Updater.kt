@@ -95,8 +95,8 @@ internal object UpdatePrefs {
         sp(c).edit().putInt("skipped", code).apply()
     }
 
-    /** It is time for the automatic look when the last one was more than about a day ago. */
-    fun isDue(c: Context): Boolean = System.currentTimeMillis() - sp(c).getLong("last", 0L) > DAY - 4 * 3_600_000L
+    /** It is time for the automatic look when the last one was more than half an hour ago (GitHub allows 60 a hour without a key). */
+    fun isDue(c: Context): Boolean = System.currentTimeMillis() - sp(c).getLong("last", 0L) > 30 * 60_000L
 
     fun markChecked(c: Context, info: UpdateInfo?) {
         val e = sp(c).edit().putLong("last", System.currentTimeMillis())
@@ -304,9 +304,9 @@ internal object UpdateState {
         }
     }
 
-    /** The automatic look when the app opens: at most about once a day. */
+    /** The automatic look when the app opens or comes back to the screen: at most every half hour. */
     suspend fun autoCheck(c: Context) {
-        if (!UpdatePrefs.auto(c) || status != US_IDLE) return
+        if (!UpdatePrefs.auto(c) || (status != US_IDLE && status != US_UP_TO_DATE)) return
         if (!UpdatePrefs.isDue(c)) {
             val cached = UpdatePrefs.cached(c)
             if (cached != null && cached.code > Updater.installedCode(c)) {
@@ -354,6 +354,19 @@ internal fun UpdatePrompt() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { UpdateState.autoCheck(context) }
+    // and again each time the app comes back to the screen (the half-hour limit still applies)
+    val activity = remember(context) {
+        var x: Context = context
+        while (x is android.content.ContextWrapper && x !is androidx.activity.ComponentActivity) x = x.baseContext
+        x as? androidx.activity.ComponentActivity
+    }
+    androidx.compose.runtime.DisposableEffect(activity) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_START) scope.launch { UpdateState.autoCheck(context) }
+        }
+        activity?.lifecycle?.addObserver(obs)
+        onDispose { activity?.lifecycle?.removeObserver(obs) }
+    }
 
     val info = UpdateState.info
     val status = UpdateState.status
