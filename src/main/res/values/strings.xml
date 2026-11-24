@@ -315,4 +315,7 @@
     <string name="agent_contact_none">مش لاقي «%1$s» في جهات الاتصال.</string>
     <string name="agent_contacts_denied">محتاج صلاحية جهات الاتصال عشان أدوّر على الاسم.</string>
     <string name="agent_sms_sent">الرسالة اتبعتت للشبكة ✉️</string>
+    <string name="jar_view_code">الكود</string>
+    <string name="jar_view_diff">الفروق</string>
+    <string name="jar_no_changes">مفيش فروق عن النسخة اللي قبلها.</string>
 </resources>

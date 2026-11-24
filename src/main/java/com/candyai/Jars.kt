@@ -203,10 +203,19 @@ fun JarViewer(id: String, onBack: () -> Unit, onChanged: () -> Unit = {}) {
     var versionsMenu by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
+    var diffMode by remember(id) { mutableStateOf(false) }
+    var prevFiles by remember(id) { mutableStateOf<List<JarFile>?>(null) }   // the version before the one on screen
     BackHandler { onBack() }
 
     LaunchedEffect(id, reload) {
         try { jar = Api.jar(id); error = null } catch (e: Exception) { error = errorMessage(ctx, e) }
+    }
+    LaunchedEffect(jar, viewV, diffMode) {
+        val jj = jar
+        if (!diffMode || jj == null) { prevFiles = null; return@LaunchedEffect }
+        val shown = if (viewV != 0) viewV else jj.current
+        val before = jj.versions.map { it.first }.filter { it < shown }.maxOrNull()
+        prevFiles = try { if (before == null) emptyList() else Api.jarVersion(jj.id, before) } catch (_: Exception) { null }
     }
     val j = jar
     val files = if (viewV != 0 && oldFiles != null) oldFiles!! else j?.files ?: emptyList()
@@ -281,6 +290,28 @@ fun JarViewer(id: String, onBack: () -> Unit, onChanged: () -> Unit = {}) {
                 if (files.isEmpty()) {
                     Text(stringResource(R.string.jar_empty), color = c.subtext, fontSize = 14.sp, modifier = Modifier.fillMaxWidth().padding(32.dp))
                 } else {
+                    if (j.versions.size > 1) {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            for ((isDiff, label) in listOf(false to R.string.jar_view_code, true to R.string.jar_view_diff)) {
+                                Surface(
+                                    shape = RoundedCornerShape(50), color = if (diffMode == isDiff) c.userBubble else c.surface,
+                                    border = BorderStroke(1.dp, c.border),
+                                    modifier = Modifier.clip(RoundedCornerShape(50)).clickable { diffMode = isDiff },
+                                ) {
+                                    Text(
+                                        stringResource(label), color = if (diffMode == isDiff) c.onUserBubble else c.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 7.dp),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    val before = prevFiles
+                    if (diffMode && before != null) {
+                        JarDiffView(files, before)
+                    } else if (diffMode) {
+                        Box(Modifier.weight(1f).fillMaxWidth()) { CircularProgressIndicator(Modifier.align(Alignment.Center).size(28.dp), color = c.accent, strokeWidth = 3.dp) }
+                    } else {
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         for (f in files) {
                             val on = f.path == file?.path
@@ -306,6 +337,7 @@ fun JarViewer(id: String, onBack: () -> Unit, onChanged: () -> Unit = {}) {
                                 }
                             }
                         }
+                    }
                     }
                 }
             }
@@ -368,5 +400,116 @@ fun JarViewer(id: String, onBack: () -> Unit, onChanged: () -> Unit = {}) {
             },
             dismissButton = { TextButton(onClick = { deleting = false }) { Text(stringResource(R.string.cancel)) } },
         )
+    }
+}
+
+// ───────────── what changed between two versions ─────────────
+
+private class DiffLine(val mark: Char, val text: String)          // ' ' kept, '+' added, '-' removed
+private class DiffEntry(val path: String, val mark: String, val lines: List<DiffLine>)
+
+/** Line diff: the common start and end are cut off first, then the middle goes through a longest-common-subsequence table. */
+private fun diffLines(old: List<String>, new: List<String>): List<DiffLine> {
+    var a = 0
+    while (a < old.size && a < new.size && old[a] == new[a]) a++
+    var e = 0
+    while (e < old.size - a && e < new.size - a && old[old.size - 1 - e] == new[new.size - 1 - e]) e++
+    val mo = old.subList(a, old.size - e)
+    val mn = new.subList(a, new.size - e)
+    val out = ArrayList<DiffLine>()
+    for (i in 0 until a) out.add(DiffLine(' ', old[i]))
+    if (mo.size.toLong() * mn.size > 4_000_000L) {                      // too big for the table: show it as one replaced block
+        mo.forEach { out.add(DiffLine('-', it)) }
+        mn.forEach { out.add(DiffLine('+', it)) }
+    } else {
+        val w = mn.size + 1
+        val t = IntArray((mo.size + 1) * w)
+        for (i in mo.size - 1 downTo 0) for (j in mn.size - 1 downTo 0)
+            t[i * w + j] = if (mo[i] == mn[j]) t[(i + 1) * w + j + 1] + 1 else maxOf(t[(i + 1) * w + j], t[i * w + j + 1])
+        var i = 0
+        var j = 0
+        while (i < mo.size && j < mn.size) {
+            when {
+                mo[i] == mn[j] -> { out.add(DiffLine(' ', mo[i])); i++; j++ }
+                t[(i + 1) * w + j] >= t[i * w + j + 1] -> { out.add(DiffLine('-', mo[i])); i++ }
+                else -> { out.add(DiffLine('+', mn[j])); j++ }
+            }
+        }
+        while (i < mo.size) { out.add(DiffLine('-', mo[i])); i++ }
+        while (j < mn.size) { out.add(DiffLine('+', mn[j])); j++ }
+    }
+    for (k in old.size - e until old.size) out.add(DiffLine(' ', old[k]))
+    return out
+}
+
+private fun changes(now: List<JarFile>, before: List<JarFile>): List<DiffEntry> {
+    val o = before.associate { it.path to it.content }
+    val n = now.associate { it.path to it.content }
+    return (o.keys + n.keys).sorted().mapNotNull { p ->
+        val a = o[p]
+        val b = n[p]
+        when {
+            a == null && b != null -> DiffEntry(p, "+", diffLines(emptyList(), b.split("\n")))
+            a != null && b == null -> DiffEntry(p, "−", diffLines(a.split("\n"), emptyList()))
+            a != null && b != null && a != b -> DiffEntry(p, "~", diffLines(a.split("\n"), b.split("\n")))
+            else -> null
+        }
+    }
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.ColumnScope.JarDiffView(now: List<JarFile>, before: List<JarFile>) {
+    val c = LocalCandy.current
+    val entries = remember(now, before) { changes(now, before) }
+    var sel by remember(now, before) { mutableStateOf<String?>(null) }
+    if (entries.isEmpty()) {
+        Text(stringResource(R.string.jar_no_changes), color = c.subtext, fontSize = 14.sp, modifier = Modifier.fillMaxWidth().padding(32.dp))
+        return
+    }
+    val cur = entries.firstOrNull { it.path == sel } ?: entries.first()
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        for (en in entries) {
+            val on = en.path == cur.path
+            Surface(
+                shape = RoundedCornerShape(50), color = if (on) c.userBubble else c.surface,
+                border = BorderStroke(1.dp, c.border),
+                modifier = Modifier.clip(RoundedCornerShape(50)).clickable { sel = en.path },
+            ) {
+                Text(
+                    "${en.mark} ${en.path}", color = if (on) c.onUserBubble else c.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                    fontFamily = FontFamily.Monospace, maxLines = 1, modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                )
+            }
+        }
+    }
+    // unchanged stretches are folded: three lines of context around each change
+    val rows = remember(cur) {
+        val keep = BooleanArray(cur.lines.size)
+        cur.lines.forEachIndexed { i, l -> if (l.mark != ' ') for (k in maxOf(0, i - 3)..minOf(cur.lines.lastIndex, i + 3)) keep[k] = true }
+        val out = ArrayList<Pair<Char, String>>()
+        var hidden = 0
+        cur.lines.forEachIndexed { i, l ->
+            if (keep[i]) { if (hidden > 0) { out.add('…' to hidden.toString()); hidden = 0 }; out.add(l.mark to l.text) } else hidden++
+        }
+        if (hidden > 0) out.add('…' to hidden.toString())
+        out
+    }
+    val green = Color(0xFF2E9E5B)
+    val red = Color(0xFFD64545)
+    Box(Modifier.weight(1f).fillMaxWidth().padding(top = 6.dp)) {
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            SelectionContainer {
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).horizontalScroll(rememberScrollState()).padding(vertical = 8.dp)) {
+                    for ((mark, text) in rows) {
+                        val bg = when (mark) { '+' -> green.copy(alpha = 0.18f); '-' -> red.copy(alpha = 0.18f); else -> Color.Transparent }
+                        Text(
+                            if (mark == '…') "⋯  $text" else "$mark $text",
+                            color = if (mark == '…') c.subtext else c.text, fontFamily = FontFamily.Monospace, fontSize = 13.sp, lineHeight = 18.sp, softWrap = false,
+                            modifier = Modifier.fillMaxWidth().background(bg).padding(horizontal = 16.dp),
+                        )
+                    }
+                }
+            }
+        }
     }
 }

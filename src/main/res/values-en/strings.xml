@@ -313,4 +313,7 @@
     <string name="agent_contact_none">I could not find \"%1$s\" in your contacts.</string>
     <string name="agent_contacts_denied">I need the contacts permission to look the name up.</string>
     <string name="agent_sms_sent">The message was handed to the network ✉️</string>
+    <string name="jar_view_code">Code</string>
+    <string name="jar_view_diff">Changes</string>
+    <string name="jar_no_changes">No changes from the previous version.</string>
 </resources>
