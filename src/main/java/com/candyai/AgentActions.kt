@@ -188,9 +188,9 @@ object AgentActions {
 
     private fun whatsapp(ctx: Context, a: AgentAction): Boolean {
         val uri = Uri.parse("https://wa.me/${waNumber(ctx, a.arg(0))}" + if (a.arg(1).isNotBlank()) "?text=" + Uri.encode(a.arg(1)) else "")
-        return go(ctx, Intent(Intent.ACTION_VIEW, uri).setPackage("com.whatsapp"))
-            || go(ctx, Intent(Intent.ACTION_VIEW, uri).setPackage("com.whatsapp.w4b"))
-            || go(ctx, Intent(Intent.ACTION_VIEW, uri))
+        // the third word "business" means WhatsApp Business; otherwise the regular one goes first
+        val pkgs = if (a.arg(2).lowercase().startsWith("business")) listOf("com.whatsapp.w4b", "com.whatsapp") else listOf("com.whatsapp", "com.whatsapp.w4b")
+        return pkgs.any { p -> go(ctx, Intent(Intent.ACTION_VIEW, uri).setPackage(p)) } || go(ctx, Intent(Intent.ACTION_VIEW, uri))
     }
 
     /** Candy takes the screen: needs the accessibility service. Without it, the person is sent to switch it on. */
