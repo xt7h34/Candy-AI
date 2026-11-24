@@ -17,8 +17,8 @@ android {
         applicationId = "com.candyai"
         minSdk = 26
         targetSdk = 35
-        versionCode = 49
-        versionName = "0.49"
+        versionCode = 50
+        versionName = "0.50"
         // Address of the Candy server: one line in api-url.txt. It can also be changed inside the app.
         val apiUrl = File(rootDir, "api-url.txt").takeIf { it.exists() }
             ?.readLines()?.firstOrNull()?.trim().orEmpty().replace("\"", "")

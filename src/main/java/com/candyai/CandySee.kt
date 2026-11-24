@@ -102,6 +102,8 @@ class SeeChat(private val ctx: Context, private val scope: CoroutineScope, var s
     var capturing by mutableStateOf(false)
     /** Phone actions Candy prepared in the last reply; the panel asks before doing them. */
     var actions by mutableStateOf<List<AgentAction>>(emptyList())
+    /** Steps of a research that is running (shown as a card, like in the main chat). */
+    var research by mutableStateOf<List<String>>(emptyList())
     private var jobId: String? = null
     private var drawn: List<AttRef> = emptyList()
     private var messageId = 0L
@@ -126,7 +128,9 @@ class SeeChat(private val ctx: Context, private val scope: CoroutineScope, var s
             val piece = if (p.full) p.text else p.delta
             if (piece.isNotEmpty()) reply = if (p.full) piece else reply + piece
             since = p.next
+            if (p.progress.isNotEmpty()) research = p.progress
             if (p.status != "running") {
+                research = emptyList()
                 val fin = p.final
                 if (!fin.isNullOrBlank()) reply = fin
                 if (p.atts.isNotEmpty()) drawn = p.atts
@@ -144,6 +148,7 @@ class SeeChat(private val ctx: Context, private val scope: CoroutineScope, var s
         VoicePlayer.stop()
         sending = true
         error = ""
+        research = emptyList()
         drawn = emptyList()
         messageId = 0L
         turns.add(
@@ -459,6 +464,7 @@ fun SeeCapsule(
                         } else if (chat.sending || chat.listening) {
                             AiTypingBubble(stringResource(if (chat.listening) R.string.ai_listening else R.string.ai_thinking))
                         }
+                        if (chat.research.isNotEmpty() && chat.sending) ResearchCard(chat.research)
                     }
                 }
                 if (chat.pending.isNotEmpty()) PendingStrip(chat.pending) { chat.pending.remove(it) }
