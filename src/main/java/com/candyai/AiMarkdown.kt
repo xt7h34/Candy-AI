@@ -148,6 +148,7 @@ internal fun AiMarkdown(text: String) {
         for (p in parts) when (p) {
             is ArtPart.Text -> if (p.s.isNotBlank()) AiMarkdownText(p.s.trim())
             is ArtPart.Card -> ArtifactCard(p.id, p.type, p.title)
+            is ArtPart.Jar -> JarCard(p.id, p.title, p.changed, p.failed)
         }
     }
 }

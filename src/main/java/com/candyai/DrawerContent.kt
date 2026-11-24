@@ -85,6 +85,7 @@ fun ConversationsDrawer(
     onNotella: () -> Unit,
     onSugar: () -> Unit,
     onArtifacts: () -> Unit,
+    onJars: () -> Unit,
     onDeleted: (String) -> Unit,
 ) {
     val c = LocalCandy.current
@@ -170,6 +171,17 @@ fun ConversationsDrawer(
                 androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.ic_artifacts), null, Modifier.size(30.dp))
                 Spacer(Modifier.width(12.dp))
                 Text(stringResource(R.string.artifacts), color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
+
+        Surface(
+            shape = RoundedCornerShape(14.dp), color = c.surface, border = BorderStroke(1.dp, c.border),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp).padding(bottom = 8.dp).clip(RoundedCornerShape(14.dp)).combinedClickable(onClick = onJars),
+        ) {
+            Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) { Text("🫙", fontSize = 22.sp) }
+                Spacer(Modifier.width(12.dp))
+                Text(stringResource(R.string.jars), color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
         }
 

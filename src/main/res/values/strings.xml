@@ -299,4 +299,13 @@
     <string name="agent_g_open">فتح تطبيقات وروابط وإعدادات</string>
     <string name="agent_g_agent">التحكم في الشاشة</string>
     <string name="research_title">كاندي بتبحث</string>
+    <string name="jars">برطمان الأكواد</string>
+    <string name="jars_empty">مفيش برطمانات لسه. اطلب من كاندي مشروع كود بأكتر من ملف (بوت، API، موقع بملفات...) وهتلاقيه هنا.</string>
+    <string name="jar_files_n">%1$d ملف</string>
+    <string name="jar_changed">اتغيّر %1$d ملف</string>
+    <string name="jar_failed">%1$d تعديل فشل</string>
+    <string name="jar_export">تصدير zip</string>
+    <string name="jar_empty">البرطمان فاضي.</string>
+    <string name="jar_delete_title">حذف البرطمان؟</string>
+    <string name="jar_delete_body">المشروع وكل نسخه هيتحذفوا نهائيًا.</string>
 </resources>

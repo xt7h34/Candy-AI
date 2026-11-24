@@ -297,4 +297,13 @@
     <string name="agent_g_open">Opening apps, links and settings</string>
     <string name="agent_g_agent">Screen control</string>
     <string name="research_title">Candy is researching</string>
+    <string name="jars">Code Jar</string>
+    <string name="jars_empty">No jars yet. Ask Candy for a multi-file code project (a bot, an API, a site with several files…) and it will show up here.</string>
+    <string name="jar_files_n">%1$d files</string>
+    <string name="jar_changed">%1$d files changed</string>
+    <string name="jar_failed">%1$d edits failed</string>
+    <string name="jar_export">Export zip</string>
+    <string name="jar_empty">This jar is empty.</string>
+    <string name="jar_delete_title">Delete this jar?</string>
+    <string name="jar_delete_body">The project and all its versions will be deleted for good.</string>
 </resources>

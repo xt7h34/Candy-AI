@@ -27,6 +27,9 @@ class AgentStep(
     val app: String, val seconds: Int, val question: String, val summary: String, val note: String, val confirm: String,
 )
 data class ArtifactItem(val id: String, val title: String, val type: String, val updatedAt: Long)
+data class JarItem(val id: String, val title: String, val files: Int, val updatedAt: Long)
+data class JarFile(val path: String, val content: String)
+data class JarFull(val id: String, val title: String, val current: Int, val files: List<JarFile>, val versions: List<Pair<Int, Long>>)
 data class ArtifactFull(val id: String, val title: String, val type: String, val lang: String, val current: Int, val content: String, val versions: List<Pair<Int, Long>>)
 data class Project(val id: String, val name: String, val color: Int, val instructions: String, val count: Int, val updatedAt: Long)
 
@@ -276,6 +279,33 @@ object Api {
     suspend fun restoreArtifact(id: String, v: Int) { json("POST", "/artifacts/$id", JSONObject().put("restore", v)) }
 
     suspend fun deleteArtifact(id: String) { json("DELETE", "/artifacts/$id") }
+
+    // ───── code jars ─────
+    suspend fun jars(): List<JarItem> {
+        val arr = json("GET", "/jars").getJSONArray("jars")
+        return (0 until arr.length()).map {
+            val o = arr.getJSONObject(it)
+            JarItem(o.getString("id"), o.getString("title"), o.optInt("files"), o.optLong("updated_at"))
+        }
+    }
+
+    private fun parseJarFiles(a: org.json.JSONArray?): List<JarFile> =
+        if (a == null) emptyList() else (0 until a.length()).map { a.getJSONObject(it).let { f -> JarFile(f.getString("path"), f.optString("content", "")) } }
+
+    suspend fun jar(id: String): JarFull {
+        val o = json("GET", "/jars/$id", null, 30000)
+        val vs = o.optJSONArray("versions")
+        val versions = if (vs == null) emptyList() else (0 until vs.length()).map { vs.getJSONObject(it).let { v -> v.getInt("v") to v.optLong("created_at") } }
+        return JarFull(o.getString("id"), o.getString("title"), o.optInt("current", 1), parseJarFiles(o.optJSONArray("files")), versions)
+    }
+
+    suspend fun jarVersion(id: String, v: Int): List<JarFile> = parseJarFiles(json("GET", "/jars/$id/versions/$v", null, 30000).optJSONArray("files"))
+
+    suspend fun renameJar(id: String, title: String) { json("POST", "/jars/$id", JSONObject().put("title", title)) }
+
+    suspend fun restoreJar(id: String, v: Int) { json("POST", "/jars/$id", JSONObject().put("restore", v)) }
+
+    suspend fun deleteJar(id: String) { json("DELETE", "/jars/$id") }
 
     // ───── projects ─────
     suspend fun projects(): List<Project> {

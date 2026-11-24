@@ -95,14 +95,17 @@ private val ArtifactToken = Regex("\\[\\[artifact:([a-z0-9]+)\\|([a-z]+)\\|([^\\
 internal sealed class ArtPart {
     class Text(val s: String) : ArtPart()
     class Card(val id: String, val type: String, val title: String) : ArtPart()
+    class Jar(val id: String, val title: String, val changed: Int, val failed: Int) : ArtPart()
 }
 
 internal fun splitArtifacts(text: String): List<ArtPart> {
     val out = ArrayList<ArtPart>()
     var at = 0
-    for (m in ArtifactToken.findAll(text)) {
+    val found = ArtifactToken.findAll(text).map { it to false }.toList() + JarToken.findAll(text).map { it to true }.toList()
+    for ((m, isJar) in found.sortedBy { it.first.range.first }) {
         if (m.range.first > at) out.add(ArtPart.Text(text.substring(at, m.range.first)))
-        out.add(ArtPart.Card(m.groupValues[1], m.groupValues[2], m.groupValues[3]))
+        if (isJar) out.add(ArtPart.Jar(m.groupValues[1], m.groupValues[2], m.groupValues[3].toIntOrNull() ?: 0, m.groupValues[4].toIntOrNull() ?: 0))
+        else out.add(ArtPart.Card(m.groupValues[1], m.groupValues[2], m.groupValues[3]))
         at = m.range.last + 1
     }
     if (at < text.length) out.add(ArtPart.Text(text.substring(at)))
@@ -110,7 +113,7 @@ internal fun splitArtifacts(text: String): List<ArtPart> {
 }
 
 /** Text without the markers (for copying and sharing). */
-internal fun stripArtifacts(text: String): String = ArtifactToken.replace(text, "").replace(Regex("\n{3,}"), "\n\n")
+internal fun stripArtifacts(text: String): String = JarToken.replace(ArtifactToken.replace(text, ""), "").replace(Regex("\n{3,}"), "\n\n")
 
 /** Opens an artifact. The default (null) starts the main screen with it, which also works from the edge panel. */
 val LocalOpenArtifact = compositionLocalOf<((String) -> Unit)?> { null }
