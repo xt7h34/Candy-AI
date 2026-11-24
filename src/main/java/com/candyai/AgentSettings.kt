@@ -79,7 +79,7 @@ fun AgentSettingsCard() {
         for (g in AgentActions.GROUPS) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    stringResource(when (g) { "clock" -> R.string.agent_g_clock; "calendar" -> R.string.agent_g_calendar; "phone" -> R.string.agent_g_phone; "agent" -> R.string.agent_g_agent; else -> R.string.agent_g_open }),
+                    stringResource(when (g) { "clock" -> R.string.agent_g_clock; "calendar" -> R.string.agent_g_calendar; "phone" -> R.string.agent_g_phone; "sms" -> R.string.agent_g_sms; "agent" -> R.string.agent_g_agent; else -> R.string.agent_g_open }),
                     color = c.text, fontSize = 14.sp, modifier = Modifier.weight(1f),
                 )
                 Switch(checked = g in auto, onCheckedChange = { on -> auto = if (on) auto + g else auto - g; Store.autoActions = auto })

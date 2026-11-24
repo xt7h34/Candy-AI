@@ -306,4 +306,11 @@
     <string name="jar_empty">This jar is empty.</string>
     <string name="jar_delete_title">Delete this jar?</string>
     <string name="jar_delete_body">The project and all its versions will be deleted for good.</string>
+    <string name="agent_whatsapp">🟢 Open WhatsApp with %1$s: \"%2$s\"</string>
+    <string name="agent_sms_direct">✉️ Send an SMS to %1$s right away: \"%2$s\"</string>
+    <string name="agent_g_sms">Send SMS directly (without you pressing send)</string>
+    <string name="agent_pick_contact">Which \"%1$s\" do you mean?</string>
+    <string name="agent_contact_none">I could not find \"%1$s\" in your contacts.</string>
+    <string name="agent_contacts_denied">I need the contacts permission to look the name up.</string>
+    <string name="agent_sms_sent">The message was handed to the network ✉️</string>
 </resources>

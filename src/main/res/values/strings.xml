@@ -308,4 +308,11 @@
     <string name="jar_empty">البرطمان فاضي.</string>
     <string name="jar_delete_title">حذف البرطمان؟</string>
     <string name="jar_delete_body">المشروع وكل نسخه هيتحذفوا نهائيًا.</string>
+    <string name="agent_whatsapp">🟢 فتح واتساب مع %1$s: «%2$s»</string>
+    <string name="agent_sms_direct">✉️ إرسال SMS لـ %1$s فورًا: «%2$s»</string>
+    <string name="agent_g_sms">إرسال SMS مباشر (من غير ما تدوس إرسال)</string>
+    <string name="agent_pick_contact">أنهي «%1$s» تقصد؟</string>
+    <string name="agent_contact_none">مش لاقي «%1$s» في جهات الاتصال.</string>
+    <string name="agent_contacts_denied">محتاج صلاحية جهات الاتصال عشان أدوّر على الاسم.</string>
+    <string name="agent_sms_sent">الرسالة اتبعتت للشبكة ✉️</string>
 </resources>

@@ -37,8 +37,12 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /** A phone action Candy prepared (alarm, timer, calendar event, call, SMS, open an app / link / map / search). Always confirmed first. */
-class AgentAction(val type: String, val args: List<String>) {
+class AgentAction(val type: String, val args: List<String>, val label: String = "") {
     fun arg(i: Int): String = args.getOrNull(i)?.trim() ?: ""
+    /** Who it is for: the contact's name with the number, or just what Candy wrote. */
+    fun who(): String = if (label.isBlank()) arg(0) else "$label (${arg(0)})"
+    /** The recipient is a name, not a number: it has to be looked up in the contacts first. */
+    fun needsContact(): Boolean = type in setOf("call", "sms", "whatsapp") && arg(0).count { it.isDigit() } < 5
 }
 
 object AgentActions {
@@ -58,12 +62,13 @@ object AgentActions {
     private fun isHttps(s: String) = Regex("^https://\\S+$", RegexOption.IGNORE_CASE).matches(s.trim())
 
     /** The kinds the person can allow without asking (Settings → agent). */
-    val GROUPS = listOf("clock", "calendar", "phone", "open", "agent")
+    val GROUPS = listOf("clock", "calendar", "phone", "sms", "open", "agent")
 
     fun group(a: AgentAction): String = when (a.type) {
         "alarm", "timer" -> "clock"
         "calendar" -> "calendar"
-        "call", "sms" -> "phone"
+        "call", "whatsapp" -> "phone"
+        "sms" -> "sms"
         "agent" -> "agent"
         else -> "open"
     }
@@ -73,8 +78,9 @@ object AgentActions {
         "alarm" -> time(a.arg(0)) != null
         "timer" -> (a.arg(0).toLongOrNull() ?: 0) in 1..86400
         "calendar" -> a.arg(0).isNotBlank() && begin(a.arg(1)) != null
-        "call" -> a.arg(0).replace(Regex("[^\\d+*#]"), "").isNotEmpty()
-        "sms" -> a.arg(0).replace(Regex("[^\\d+*#]"), "").isNotEmpty() && a.arg(1).isNotBlank()
+        "call" -> a.arg(0).isNotBlank()
+        "sms" -> a.arg(0).isNotBlank() && a.arg(1).isNotBlank()
+        "whatsapp" -> a.arg(0).isNotBlank()
         "open", "map", "search" -> a.arg(0).isNotBlank()
         "url" -> isHttps(a.arg(0))
         "agent" -> a.arg(0).isNotBlank()
@@ -92,8 +98,9 @@ object AgentActions {
         "alarm" -> ctx.getString(R.string.agent_alarm, a.arg(0)) + a.arg(1).let { if (it.isBlank()) "" else " ($it)" }
         "timer" -> ctx.getString(R.string.agent_timer, duration(ctx, a.arg(0).toLongOrNull() ?: 0)) + a.arg(1).let { if (it.isBlank()) "" else " ($it)" }
         "calendar" -> ctx.getString(R.string.agent_calendar, a.arg(0), a.arg(1))
-        "call" -> ctx.getString(R.string.agent_call, a.arg(0))
-        "sms" -> ctx.getString(R.string.agent_sms, a.arg(0), a.arg(1))
+        "call" -> ctx.getString(R.string.agent_call, a.who())
+        "sms" -> ctx.getString(R.string.agent_sms_direct, a.who(), a.arg(1))
+        "whatsapp" -> ctx.getString(R.string.agent_whatsapp, a.who(), a.arg(1))
         "open" -> ctx.getString(R.string.agent_open, a.arg(0))
         "url" -> ctx.getString(R.string.agent_url, a.arg(0))
         "map" -> ctx.getString(R.string.agent_map, a.arg(0))
@@ -133,7 +140,8 @@ object AgentActions {
         }
         // the dialer opens with the number; the person presses call / send themselves
         "call" -> go(ctx, Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", a.arg(0).replace(Regex("[^\\d+*#]"), ""), null)))
-        "sms" -> go(ctx, Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + a.arg(0).replace(Regex("[^\\d+*#]"), ""))).putExtra("sms_body", a.arg(1)))
+        "sms" -> sendSms(ctx, a)
+        "whatsapp" -> whatsapp(ctx, a)
         "open" -> openApp(ctx, a.arg(0)) || (settingsAction(a.arg(0)) != null && openSettings(ctx, a.arg(0)))
         "agent" -> startAgent(ctx, a.arg(0))
         "settings" -> openSettings(ctx, a.arg(0))
@@ -141,6 +149,48 @@ object AgentActions {
         "map" -> go(ctx, Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(a.arg(0)))))
         "search" -> go(ctx, Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(a.arg(0)))))
         else -> false
+    }
+
+    /** Sent straight away when the SMS permission was granted; otherwise the composer opens with the text ready. */
+    private fun sendSms(ctx: Context, a: AgentAction): Boolean {
+        val num = a.arg(0).replace(Regex("[^\\d+*#]"), "")
+        val granted = androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.SEND_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            try {
+                @Suppress("DEPRECATION")
+                val sm = if (android.os.Build.VERSION.SDK_INT >= 31) ctx.getSystemService(android.telephony.SmsManager::class.java) else android.telephony.SmsManager.getDefault()
+                sm.sendMultipartTextMessage(num, null, sm.divideMessage(a.arg(1)), null, null)
+                Toast.makeText(ctx, R.string.agent_sms_sent, Toast.LENGTH_SHORT).show()
+                return true
+            } catch (_: Exception) { /* falls back to the composer */ }
+        }
+        return go(ctx, Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$num")).putExtra("sms_body", a.arg(1)))
+    }
+
+    private val callingCodes = mapOf(
+        "JO" to "962", "EG" to "20", "SA" to "966", "AE" to "971", "KW" to "965", "QA" to "974", "BH" to "973", "OM" to "968",
+        "IQ" to "964", "SY" to "963", "LB" to "961", "PS" to "970", "YE" to "967", "LY" to "218", "TN" to "216", "DZ" to "213",
+        "MA" to "212", "SD" to "249", "TR" to "90", "US" to "1", "GB" to "44", "DE" to "49", "FR" to "33",
+    )
+
+    /** wa.me wants the number in international form, no plus. A local number (0791…) gets the country code of the SIM or the phone's region. */
+    private fun waNumber(ctx: Context, raw: String): String {
+        var n = raw.replace(Regex("[^\\d+]"), "")
+        if (n.startsWith("+")) return n.drop(1)
+        if (n.startsWith("00")) return n.drop(2)
+        if (n.startsWith("0")) {
+            val iso = try { (ctx.getSystemService(Context.TELEPHONY_SERVICE) as android.telephony.TelephonyManager).let { it.simCountryIso.ifBlank { it.networkCountryIso } } } catch (_: Exception) { "" }
+            val code = callingCodes[iso.uppercase()] ?: callingCodes[java.util.Locale.getDefault().country.uppercase()]
+            if (code != null) n = code + n.drop(1)
+        }
+        return n
+    }
+
+    private fun whatsapp(ctx: Context, a: AgentAction): Boolean {
+        val uri = Uri.parse("https://wa.me/${waNumber(ctx, a.arg(0))}" + if (a.arg(1).isNotBlank()) "?text=" + Uri.encode(a.arg(1)) else "")
+        return go(ctx, Intent(Intent.ACTION_VIEW, uri).setPackage("com.whatsapp"))
+            || go(ctx, Intent(Intent.ACTION_VIEW, uri).setPackage("com.whatsapp.w4b"))
+            || go(ctx, Intent(Intent.ACTION_VIEW, uri))
     }
 
     /** Candy takes the screen: needs the accessibility service. Without it, the person is sent to switch it on. */
@@ -202,50 +252,128 @@ object AgentActions {
     }
 }
 
+/** Looks a name up in the contacts: (display name, number) pairs, one per number. */
+private fun findContacts(ctx: Context, name: String): List<Pair<String, String>> {
+    val out = LinkedHashMap<String, Pair<String, String>>()
+    try {
+        ctx.contentResolver.query(
+            android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            arrayOf(android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER),
+            android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " LIKE ?", arrayOf("%" + name.trim() + "%"), null,
+        )?.use { cur ->
+            while (cur.moveToNext() && out.size < 8) {
+                val n = cur.getString(1) ?: continue
+                val key = n.replace(Regex("[^\\d]"), "").takeLast(9)
+                if (key.isNotEmpty() && key !in out) out[key] = (cur.getString(0) ?: name) to n
+            }
+        }
+    } catch (_: Exception) { }
+    return out.values.toList()
+}
+
+/** Turns "Ahmed" into a number: reads the contacts (asks for the permission once), and lets the person pick when several match. null = give up on this action. */
+@Composable
+private fun ContactResolver(a: AgentAction, onResult: (AgentAction?) -> Unit) {
+    val ctx = LocalContext.current
+    val c = LocalCandy.current
+    var granted by remember(a) {
+        mutableStateOf(androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.READ_CONTACTS) == android.content.pm.PackageManager.PERMISSION_GRANTED)
+    }
+    var asked by remember(a) { mutableStateOf(false) }
+    var matches by remember(a) { mutableStateOf<List<Pair<String, String>>?>(null) }
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted = it; asked = true }
+    LaunchedEffect(a, granted, asked) {
+        if (!granted) {
+            if (!asked) launcher.launch(android.Manifest.permission.READ_CONTACTS)
+            else { Toast.makeText(ctx, R.string.agent_contacts_denied, Toast.LENGTH_LONG).show(); onResult(null) }
+            return@LaunchedEffect
+        }
+        val found = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { findContacts(ctx, a.arg(0)) }
+        when {
+            found.isEmpty() -> { Toast.makeText(ctx, ctx.getString(R.string.agent_contact_none, a.arg(0)), Toast.LENGTH_LONG).show(); onResult(null) }
+            found.size == 1 -> onResult(AgentAction(a.type, listOf(found[0].second) + a.args.drop(1), found[0].first))
+            else -> matches = found
+        }
+    }
+    val m = matches
+    if (m != null) {
+        AlertDialog(
+            onDismissRequest = { onResult(null) },
+            containerColor = c.surface,
+            title = { Text(stringResource(R.string.agent_pick_contact, a.arg(0)), color = c.text) },
+            text = {
+                Column {
+                    for ((n, num) in m) {
+                        Text(
+                            "$n — $num", color = c.text, fontSize = 15.sp,
+                            modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable { onResult(AgentAction(a.type, listOf(num) + a.args.drop(1), n)) }.padding(vertical = 12.dp, horizontal = 4.dp),
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { onResult(null) }) { Text(stringResource(R.string.agent_skip), color = c.subtext) } },
+        )
+    }
+}
+
 /** The confirmation card: one action at a time. A kind the person allowed with "don't ask again" runs straight away. */
 @Composable
 fun ActionConfirm(actions: List<AgentAction>, onDone: () -> Unit) {
     val ctx = LocalContext.current
     val c = LocalCandy.current
     val list = remember(actions) { actions.filter { AgentActions.valid(it) } }
-    val allowed = remember(actions) { Store.autoActions }
-    val auto = remember(actions) { list.filter { AgentActions.group(it) in allowed } }
-    val ask = remember(actions) { list.filter { AgentActions.group(it) !in allowed } }
-    LaunchedEffect(actions) {
-        for (a in auto) if (!AgentActions.run(ctx, a)) Toast.makeText(ctx, R.string.agent_failed, Toast.LENGTH_SHORT).show()
-        if (ask.isEmpty()) onDone()
-    }
-    if (ask.isEmpty()) return
     var i by remember(actions) { mutableIntStateOf(0) }
+    var cur by remember(actions, i) { mutableStateOf<AgentAction?>(null) }       // the action with its recipient resolved
     var dontAsk by remember(actions, i) { mutableStateOf(false) }
-    val a = ask[i]
-    fun next() { if (i + 1 < ask.size) i++ else onDone() }
-    AlertDialog(
-        onDismissRequest = { onDone() },
-        containerColor = c.surface,
-        title = { Text(stringResource(R.string.agent_ask_title), color = c.text) },
-        text = {
-            Column {
-                Text(
-                    AgentActions.describe(ctx, a), color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
-                    style = TextStyle(textDirection = TextDirection.Content),
-                )
-                Row(
-                    Modifier.padding(top = 14.dp).clip(RoundedCornerShape(10.dp)).clickable { dontAsk = !dontAsk },
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Checkbox(checked = dontAsk, onCheckedChange = { dontAsk = it })
-                    Text(stringResource(R.string.agent_dont_ask), color = c.subtext, fontSize = 13.sp)
+    var pendingSms by remember(actions, i) { mutableStateOf<AgentAction?>(null) }
+    fun next() { i++ }
+    fun doIt(x: AgentAction) { if (!AgentActions.run(ctx, x)) Toast.makeText(ctx, R.string.agent_failed, Toast.LENGTH_SHORT).show() }
+    val smsPerm = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) {
+        // granted: sent directly; denied: the composer opens instead (run() falls back by itself)
+        pendingSms?.let { doIt(it) }
+        pendingSms = null
+        next()
+    }
+    fun smsReady() = androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.SEND_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    fun perform(x: AgentAction) {
+        if (x.type == "sms" && !smsReady()) { pendingSms = x; smsPerm.launch(android.Manifest.permission.SEND_SMS) }
+        else { doIt(x); next() }
+    }
+
+    if (i >= list.size) { LaunchedEffect(actions, i) { onDone() }; return }
+    val a = list[i]
+    val ready = cur
+    when {
+        ready == null && a.needsContact() -> ContactResolver(a) { r -> if (r == null) { next() } else { cur = r } }
+        ready == null -> LaunchedEffect(a) { cur = a }
+        AgentActions.group(ready) in Store.autoActions -> LaunchedEffect(ready) { perform(ready) }
+        else -> AlertDialog(
+            onDismissRequest = { onDone() },
+            containerColor = c.surface,
+            title = { Text(stringResource(R.string.agent_ask_title), color = c.text) },
+            text = {
+                Column {
+                    Text(
+                        AgentActions.describe(ctx, ready), color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold,
+                        style = TextStyle(textDirection = TextDirection.Content),
+                    )
+                    Row(
+                        Modifier.padding(top = 14.dp).clip(RoundedCornerShape(10.dp)).clickable { dontAsk = !dontAsk },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(checked = dontAsk, onCheckedChange = { dontAsk = it })
+                        Text(stringResource(R.string.agent_dont_ask), color = c.subtext, fontSize = 13.sp)
+                    }
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                if (dontAsk) Store.autoActions = Store.autoActions + AgentActions.group(a)
-                if (!AgentActions.run(ctx, a)) Toast.makeText(ctx, R.string.agent_failed, Toast.LENGTH_SHORT).show()
-                next()
-            }) { Text(stringResource(R.string.agent_do), color = c.userBubble, fontWeight = FontWeight.Bold) }
-        },
-        dismissButton = { TextButton(onClick = { next() }) { Text(stringResource(R.string.agent_skip), color = c.subtext) } },
-    )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (dontAsk) Store.autoActions = Store.autoActions + AgentActions.group(ready)
+                    perform(ready)
+                }) { Text(stringResource(R.string.agent_do), color = c.userBubble, fontWeight = FontWeight.Bold) }
+            },
+            dismissButton = { TextButton(onClick = { next() }) { Text(stringResource(R.string.agent_skip), color = c.subtext) } },
+        )
+    }
 }
