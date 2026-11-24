@@ -53,6 +53,21 @@ object Store {
         get() = sp.getStringSet("auto_actions", emptySet())?.toSet() ?: emptySet()
         set(v) { sp.edit().putStringSet("auto_actions", v.toSet()).apply() }
 
+    /** The wake word ("Hey Candy") listening is on. */
+    var wakeOn: Boolean
+        get() = sp.getBoolean("wake_on", false)
+        set(v) { sp.edit().putBoolean("wake_on", v).apply() }
+
+    /** What the wake word does: "edge_voice" (default), "edge_type" or "voice_only" (answers out loud with no screen). */
+    var wakeAction: String
+        get() = sp.getString("wake_action", "edge_voice").let { if (it == "edge_type" || it == "voice_only") it!! else "edge_voice" }
+        set(v) { sp.edit().putString("wake_action", v).apply() }
+
+    /** 0 low, 1 normal, 2 high: how sure the phone must be that it heard the phrase. */
+    var wakeSens: Int
+        get() = sp.getInt("wake_sens", 1).coerceIn(0, 2)
+        set(v) { sp.edit().putInt("wake_sens", v.coerceIn(0, 2)).apply() }
+
     /** Circle to Search (the assistant gesture opens a frozen screenshot to draw on) is switched on. */
     var ctsOn: Boolean
         get() = sp.getBoolean("cts_on", true)

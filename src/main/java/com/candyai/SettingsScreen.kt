@@ -271,6 +271,9 @@ fun SettingsScreen(
             // Candy the agent: screen control, assistant status
             AgentSettingsCard()
 
+            // wake word
+            WakeSettingsCard()
+
             // app updates
             UpdateSection()
 

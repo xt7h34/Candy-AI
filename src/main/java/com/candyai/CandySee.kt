@@ -109,6 +109,9 @@ class SeeChat(private val ctx: Context, private val scope: CoroutineScope, var s
     private var messageId = 0L
     private val recorder = VoiceRecorder(ctx)
 
+    /** How loud it is right now while recording (0 to 32767). */
+    val level: Int get() = recorder.amplitude
+
     val hasChat: Boolean get() = turns.isNotEmpty() || sending || reply.isNotEmpty()
 
     private suspend fun follow(job: String) {

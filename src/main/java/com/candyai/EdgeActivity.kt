@@ -47,6 +47,7 @@ class EdgeActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        WakeService.idle(this)   // if the wake word opened this panel, listening starts again
         EdgeSession.current?.hide()   // let go of the assistant session so it never keeps eating touches
         SeeHolder.shot = null   // the screenshot is only ever kept in memory, and only while the panel is open
         super.onDestroy()
