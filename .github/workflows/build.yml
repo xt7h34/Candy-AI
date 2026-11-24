@@ -16,8 +16,18 @@ jobs:
       - name: Apply update.zip if present
         run: |
           if [ -f update.zip ]; then
+            OLD_CODE=$(grep -oP 'versionCode = \K[0-9]+' build.gradle.kts | head -1)
             unzip -o update.zip
             rm update.zip
+            # every applied update is a new build: the code goes up by one by itself,
+            # and the name comes from the first line of RELEASE_NOTES.md ("الإصدار 0.49")
+            NEW_CODE=$((OLD_CODE + 1))
+            sed -i -E "s/versionCode = [0-9]+/versionCode = $NEW_CODE/" build.gradle.kts
+            NAME=$(head -1 RELEASE_NOTES.md | grep -oP '[0-9]+(\.[0-9]+)+' | head -1 || true)
+            if [ -n "$NAME" ]; then
+              sed -i -E "s/versionName = \"[^\"]*\"/versionName = \"$NAME\"/" build.gradle.kts
+            fi
+            echo "Version: ${NAME:-unchanged} (code $NEW_CODE)"
             git config user.name "github-actions"
             git config user.email "actions@users.noreply.github.com"
             git add -A
