@@ -5,6 +5,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -45,7 +46,8 @@ private const val BAR_EDGE = 0.953f
 /**
  * Candy peeking over the top edge of the Candy See capsule, as if the capsule were a table.
  * Four pictures with the same frame, only the eyes differ, so swapping them never makes her jump:
- * open (waiting), side (glancing around while she thinks), half (getting sleepy), closed (blink / asleep).
+ * open (waiting), side (glancing around while she thinks), half (getting sleepy), closed (blink).
+ * When she falls asleep she fades into a second picture: head on her arms, lying along the capsule's edge, with the Z above her.
  *
  * [busy] = a reply is on its way, [listening] = the mic is open, [activeStamp] changes on every touch or typing,
  * which wakes her up. With nothing happening she gets sleepy after ~25 s and sleeps after ~45 s (with the Z).
@@ -132,36 +134,86 @@ internal fun CandyBarPeek(
     // she sits up a little while you talk to her
     val lift by animateDpAsState(if (listening) (-4).dp else 0.dp, tween(180), label = "candy-bar-lift")
 
+    // peek <-> sleeping picture: two different compositions, so they are never on screen together (a cross-fade would show two heads).
+    // Falling asleep: the peek picture sinks and fades, then the sleeping one settles in from below. Waking up is quick.
+    val asleep = sleepy == 2
+    val peekA by animateFloatAsState(
+        if (asleep) 0f else 1f,
+        if (asleep) tween(260) else tween(300, delayMillis = 140),
+        label = "candy-bar-peek-a",
+    )
+    val sleepA by animateFloatAsState(
+        if (asleep) 1f else 0f,
+        if (asleep) tween(420, delayMillis = 240) else tween(180),
+        label = "candy-bar-sleep-a",
+    )
+
     val w = 168.dp
     val h = w * (433f / 720f)
     Box(
         modifier
-            .zIndex(1f)   // above the capsule, so her fingertips lie on its edge
+            .zIndex(1f)   // above the capsule, so her fingertips and arms lie on its edge
             .size(w, h)
-            .offset(y = h * (1f - BAR_EDGE) + lift)   // the flat edge of the picture sits exactly on the capsule's top edge
+            .offset(y = lift)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onPoke() },
     ) {
+        if (peekA > 0f) {
+            Image(
+                bitmap = img,
+                contentDescription = null,
+                contentScale = ContentScale.FillBounds,
+                filterQuality = FilterQuality.Medium,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .offset(y = h * (1f - BAR_EDGE))   // the flat edge of the picture sits exactly on the capsule's top edge
+                    .graphicsLayer {
+                        alpha = peekA
+                        translationY = (1f - peekA) * 10.dp.toPx()   // sinks a little as she goes
+                        scaleX = breathe.value
+                        scaleY = breathe.value
+                        transformOrigin = TransformOrigin(0.5f, BAR_EDGE)
+                    },
+            )
+        }
+        if (sleepA > 0f) {
+            SleepingCandy(
+                breathe = breathe,
+                zAlpha = zAlpha,
+                modifier = Modifier.align(Alignment.BottomCenter).graphicsLayer {
+                    alpha = sleepA
+                    translationY = (1f - sleepA) * 14.dp.toPx()   // settles onto the capsule's edge from below
+                },
+            )
+        }
+    }
+}
+
+/** Candy asleep on her arms. Bigger than the peek picture, so it grows upward from the capsule's edge (it is only loaded when she sleeps). */
+@Composable
+private fun SleepingCandy(breathe: State<Float>, zAlpha: State<Float>, modifier: Modifier = Modifier) {
+    val sleep = ImageBitmap.imageResource(R.drawable.candy_bar_sleep)
+    val w = 172.dp
+    val h = w * (564f / 640f)
+    Box(modifier.requiredSize(w, h).offset(y = 3.dp)) {   // the bottom of the picture is hidden behind the capsule's top edge
         Image(
-            bitmap = img,
+            bitmap = sleep,
             contentDescription = null,
             contentScale = ContentScale.FillBounds,
             filterQuality = FilterQuality.Medium,
             modifier = Modifier.fillMaxSize().graphicsLayer {
                 scaleX = breathe.value
                 scaleY = breathe.value
-                transformOrigin = TransformOrigin(0.5f, BAR_EDGE)
+                transformOrigin = TransformOrigin(0.5f, 1f)
             },
         )
-        if (sleepy == 2) {
-            Image(
-                painter = painterResource(R.drawable.z_sleep),
-                contentDescription = null,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 2.dp, end = 12.dp)
-                    .requiredSize(16.dp, 27.dp)
-                    .graphicsLayer { alpha = zAlpha.value },
-            )
-        }
+        Image(
+            painter = painterResource(R.drawable.z_sleep),
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 4.dp, end = 8.dp)
+                .requiredSize(16.dp, 27.dp)
+                .graphicsLayer { alpha = zAlpha.value },
+        )
     }
 }
