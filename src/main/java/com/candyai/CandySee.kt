@@ -278,6 +278,7 @@ fun SeeCapsule(
     var tall by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     var camFile by remember { mutableStateOf<File?>(null) }
+    var lastTouch by remember { mutableStateOf(System.currentTimeMillis()) }
     val focus = remember { FocusRequester() }
     val scroll = rememberScrollState()
     val screenH = LocalConfiguration.current.screenHeightDp
@@ -425,6 +426,9 @@ fun SeeCapsule(
     LaunchedEffect(chat.reply.length, chat.turns.size) { scroll.scrollTo(scroll.maxValue) }
     DisposableEffect(Unit) { onDispose { chat.release() } }
 
+    LaunchedEffect(input, focused, menu, chat.sending, chat.listening, chat.recording, chat.reply.length, chat.turns.size, chat.pending.size) {
+        lastTouch = System.currentTimeMillis()
+    }
     val none = remember { MutableInteractionSource() }
     Column(
         modifier
@@ -434,6 +438,16 @@ fun SeeCapsule(
             .padding(horizontal = if (grown) 12.dp else 28.dp).padding(bottom = 12.dp)
             .clickable(interactionSource = none, indication = null) { },   // touches on the capsule never fall through
     ) {
+        // Candy peeks over the top edge of the capsule, as if it were a table (hidden when the answer is expanded or the screen is short)
+        if (!tall && screenH >= 640) {
+            CandyBarPeek(
+                busy = chat.sending,
+                listening = chat.listening || chat.recording,
+                activeStamp = lastTouch,
+                onPoke = { lastTouch = System.currentTimeMillis() },
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            )
+        }
         Surface(
             shape = RoundedCornerShape(if (grown) 26.dp else 30.dp),
             color = cs.surfaceContainerHigh,
