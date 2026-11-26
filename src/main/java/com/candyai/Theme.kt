@@ -177,7 +177,7 @@ object ThemeMode {
         font = Store.fontChoice
     }
 
-    fun setFont(f: String) {
+    fun chooseFont(f: String) {
         Store.fontChoice = f
         font = Store.fontChoice
     }
