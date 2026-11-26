@@ -201,13 +201,13 @@ private val AREA_H = 150.dp
 /** x of her glasses inside the 200 dp area; every picture is placed so its glasses land here */
 private const val ANCHOR_X = 109.6f
 
-private val PEEK_OPEN = Pose(R.drawable.candy_bar_open, 94.3f, 57.0f, 55.6f, 54.3f)
-private val PEEK_SIDE = Pose(R.drawable.candy_bar_side, 94.3f, 57.0f, 55.5f, 54.3f)
-private val PEEK_HALF = Pose(R.drawable.candy_bar_half, 94.3f, 56.7f, 55.5f, 54.3f)
-private val PEEK_CLOSED = Pose(R.drawable.candy_bar_closed, 94.3f, 56.7f, 55.5f, 54.2f)
-private val RISE_1 = Pose(R.drawable.candy_bar_p1, 109.7f, 67.3f, 61.4f, 67.1f)
-private val RISE_2 = Pose(R.drawable.candy_bar_p2, 108.0f, 70.0f, 59.7f, 69.5f)
-private val LEAN_OPEN = Pose(R.drawable.candy_bar_lean_awake, 162.7f, 114.0f, 91.2f, 113.4f)
-private val LEAN_SIDE = Pose(R.drawable.candy_bar_lean_side, 162.7f, 114.7f, 91.1f, 113.7f)
-private val LEAN_HALF = Pose(R.drawable.candy_bar_lean_half, 163.0f, 114.0f, 91.2f, 113.6f)
-private val LEAN_CLOSED = Pose(R.drawable.candy_bar_lean_closed, 163.0f, 114.3f, 91.2f, 113.6f)
+private val PEEK_OPEN = Pose(R.drawable.candy_bar_open, 94.3f, 56.3f, 55.9f, 53.5f)
+private val PEEK_SIDE = Pose(R.drawable.candy_bar_side, 95.0f, 57.0f, 55.9f, 54.4f)
+private val PEEK_HALF = Pose(R.drawable.candy_bar_half, 95.0f, 57.0f, 55.9f, 54.4f)
+private val PEEK_CLOSED = Pose(R.drawable.candy_bar_closed, 95.0f, 57.0f, 55.9f, 54.4f)
+private val RISE_1 = Pose(R.drawable.candy_bar_p1, 110.0f, 68.0f, 62.8f, 68.0f)
+private val RISE_2 = Pose(R.drawable.candy_bar_p2, 107.7f, 68.7f, 60.8f, 69.0f)
+private val LEAN_OPEN = Pose(R.drawable.candy_bar_lean_awake, 162.7f, 114.3f, 90.9f, 113.7f)
+private val LEAN_SIDE = Pose(R.drawable.candy_bar_lean_side, 163.0f, 114.7f, 91.3f, 113.8f)
+private val LEAN_HALF = Pose(R.drawable.candy_bar_lean_half, 163.3f, 114.3f, 91.3f, 113.7f)
+private val LEAN_CLOSED = Pose(R.drawable.candy_bar_lean_closed, 163.0f, 114.7f, 91.3f, 113.8f)
