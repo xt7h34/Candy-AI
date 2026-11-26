@@ -148,7 +148,7 @@ internal enum class Mood { Awake, Bored, Asleep }
 
 /**
  * What she is doing in the chat right now. Any pose except [Idle] replaces the body picture (and its animated eyes and mouth);
- * with [Idle] she is the usual animated body, or, when she has fallen asleep, the picture with her head on her arms.
+ * with [Idle] she is the usual animated body (when she falls asleep: closed eyes and the Z, as before).
  */
 internal enum class StagePose(val res: Int?) {
     Idle(null),
@@ -324,8 +324,8 @@ internal fun CandyStage(animated: Boolean, talkTick: Int, talkMs: Long, lastActi
                         transformOrigin = TransformOrigin(0.55f, 1f)
                     },
                 ) {
-                    // what she is doing now: a pose picture, her head on her arms when she sleeps, or the body with its animated eyes and mouth
-                    val shown: Int? = pose.res ?: if (mood == Mood.Asleep) R.drawable.candy_pose_sleep else null
+                    // what she is doing now: a pose picture, or the usual body with its animated eyes and mouth (asleep = closed eyes and the Z)
+                    val shown: Int? = pose.res
                     Crossfade(targetState = shown, animationSpec = tween(140), label = "stage-pose") { picture ->
                         Box(Modifier.fillMaxSize()) {
                             if (picture != null) {
@@ -366,7 +366,7 @@ internal fun CandyStage(animated: Boolean, talkTick: Int, talkMs: Long, lastActi
                             painter = painterResource(R.drawable.z_sleep),
                             contentDescription = null,
                             modifier = Modifier
-                                .offset(x = side * 0.74f, y = side * 0.05f)
+                                .offset(x = side * 0.70f, y = side * 0.12f)
                                 .requiredSize(side * 0.09f, side * 0.09f / 0.586f)
                                 .graphicsLayer { alpha = zAlpha.value },
                         )
