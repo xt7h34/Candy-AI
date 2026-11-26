@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cairo is found by name at run time, so the resource shrinker must not drop it. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@font/cairo_*" />

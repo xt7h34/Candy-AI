@@ -106,4 +106,9 @@ object Store {
     var themeMode: String
         get() = sp.getString("theme", "system").let { if (it == "light" || it == "dark") it else "system" }
         set(v) { sp.edit().putString("theme", if (v == "light" || v == "dark") v else "system").apply() }
+
+    /** The app font: "amman" (default, bundled) or "cairo" (needs cairo_light.ttf and cairo_bold.ttf in res/font; falls back to Amman without them). */
+    var fontChoice: String
+        get() = sp.getString("font", "amman").let { if (it == "cairo") "cairo" else "amman" }
+        set(v) { sp.edit().putString("font", if (v == "cairo") "cairo" else "amman").apply() }
 }
