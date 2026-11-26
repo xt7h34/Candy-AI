@@ -566,6 +566,36 @@ fun ChatScreen(
     // typing, sending and new messages count as someone being there, like a touch
     LaunchedEffect(input, msgs.size, sending) { lastActive = System.currentTimeMillis() }
 
+    // what Candy is doing on the stage: listening to you, thinking, searching the web, sorry when something fails, pleased after a search
+    var reaction by remember { mutableStateOf<StagePose?>(null) }
+    var searched by remember { mutableStateOf(false) }
+    LaunchedEffect(error) {
+        if (error.isNotBlank()) {
+            reaction = StagePose.Sorry
+            delay(3500)
+            if (reaction == StagePose.Sorry) reaction = null
+        }
+    }
+    LaunchedEffect(research.size, sending) { if (sending && research.isNotEmpty()) searched = true }
+    LaunchedEffect(sending) {
+        if (sending) {
+            searched = false
+            reaction = null
+        } else if (searched && error.isBlank()) {
+            searched = false
+            reaction = StagePose.Success
+            delay(2200)
+            if (reaction == StagePose.Success) reaction = null
+        }
+    }
+    val stagePose = when {
+        listening || recording -> StagePose.Listening
+        reaction != null -> reaction ?: StagePose.Idle
+        sending && research.isNotEmpty() -> StagePose.Searching
+        sending -> StagePose.Thinking
+        else -> StagePose.Idle
+    }
+
     // keep the newest message in view, and keep following it while the reply grows
     LaunchedEffect(msgs.size, sending, listening) {
         val total = listState.layoutInfo.totalItemsCount
@@ -588,7 +618,7 @@ fun ChatScreen(
             }
         },
     ) {
-        CandyStage(animated, talkTick, talkMs, lastActive)
+        CandyStage(animated, talkTick, talkMs, lastActive, stagePose)
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
             // only the menu button, so Candy stays fully visible; it sits on the same side as the drawer
             Box(

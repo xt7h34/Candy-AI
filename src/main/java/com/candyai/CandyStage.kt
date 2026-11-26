@@ -13,6 +13,7 @@ import android.util.Base64
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -146,6 +147,19 @@ internal enum class Mouth(val res: Int?) {
 internal enum class Mood { Awake, Bored, Asleep }
 
 /**
+ * What she is doing in the chat right now. Any pose except [Idle] replaces the body picture (and its animated eyes and mouth);
+ * with [Idle] she is the usual animated body, or, when she has fallen asleep, the picture with her head on her arms.
+ */
+internal enum class StagePose(val res: Int?) {
+    Idle(null),
+    Listening(R.drawable.candy_pose_listen),
+    Thinking(R.drawable.candy_pose_think),
+    Searching(R.drawable.candy_pose_search),
+    Success(R.drawable.candy_pose_success),
+    Sorry(R.drawable.candy_pose_sorry),
+}
+
+/**
  * Candy and her café as the chat's wallpaper, pinned to the top and fading into the chat.
  * Plus: a still picture. Pro and Elite: she breathes and blinks, her mouth moves while she answers
  * ([talkTick] goes up on every reply, [talkMs] is how long she keeps talking), and if nobody touches the screen
@@ -153,7 +167,7 @@ internal enum class Mood { Awake, Bored, Asleep }
  * Any touch wakes her up.
  */
 @Composable
-internal fun CandyStage(animated: Boolean, talkTick: Int, talkMs: Long, lastActive: Long) {
+internal fun CandyStage(animated: Boolean, talkTick: Int, talkMs: Long, lastActive: Long, pose: StagePose = StagePose.Idle) {
     var mood by remember { mutableStateOf(Mood.Awake) }
     var blinkEyes by remember { mutableStateOf<Eyes?>(null) }
     var actEyes by remember { mutableStateOf<Eyes?>(null) }
@@ -310,34 +324,49 @@ internal fun CandyStage(animated: Boolean, talkTick: Int, talkMs: Long, lastActi
                         transformOrigin = TransformOrigin(0.55f, 1f)
                     },
                 ) {
-                    Image(
-                        painter = painterResource(R.drawable.candy_stage_body),
-                        contentDescription = null,
-                        contentScale = ContentScale.FillBounds,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                    eyes.res?.let { r ->
-                        Image(
-                            painter = painterResource(r),
-                            contentDescription = null,
-                            contentScale = ContentScale.FillBounds,
-                            modifier = Modifier.offset(x = side * EYES_X, y = side * EYES_Y).requiredSize(side * EYES_W, side * EYES_H),
-                        )
+                    // what she is doing now: a pose picture, her head on her arms when she sleeps, or the body with its animated eyes and mouth
+                    val shown: Int? = pose.res ?: if (mood == Mood.Asleep) R.drawable.candy_pose_sleep else null
+                    Crossfade(targetState = shown, animationSpec = tween(140), label = "stage-pose") { picture ->
+                        Box(Modifier.fillMaxSize()) {
+                            if (picture != null) {
+                                Image(
+                                    painter = painterResource(picture),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.FillBounds,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            } else {
+                                Image(
+                                    painter = painterResource(R.drawable.candy_stage_body),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.FillBounds,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                                eyes.res?.let { r ->
+                                    Image(
+                                        painter = painterResource(r),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.FillBounds,
+                                        modifier = Modifier.offset(x = side * EYES_X, y = side * EYES_Y).requiredSize(side * EYES_W, side * EYES_H),
+                                    )
+                                }
+                                mouth.res?.let { r ->
+                                    Image(
+                                        painter = painterResource(r),
+                                        contentDescription = null,
+                                        contentScale = ContentScale.FillBounds,
+                                        modifier = Modifier.offset(x = side * MOUTH_X, y = side * MOUTH_Y).requiredSize(side * MOUTH_W, side * MOUTH_H),
+                                    )
+                                }
+                            }
+                        }
                     }
-                    mouth.res?.let { r ->
-                        Image(
-                            painter = painterResource(r),
-                            contentDescription = null,
-                            contentScale = ContentScale.FillBounds,
-                            modifier = Modifier.offset(x = side * MOUTH_X, y = side * MOUTH_Y).requiredSize(side * MOUTH_W, side * MOUTH_H),
-                        )
-                    }
-                    if (mood == Mood.Asleep) {
+                    if (mood == Mood.Asleep && pose == StagePose.Idle) {
                         Image(
                             painter = painterResource(R.drawable.z_sleep),
                             contentDescription = null,
                             modifier = Modifier
-                                .offset(x = side * 0.70f, y = side * 0.12f)
+                                .offset(x = side * 0.74f, y = side * 0.05f)
                                 .requiredSize(side * 0.09f, side * 0.09f / 0.586f)
                                 .graphicsLayer { alpha = zAlpha.value },
                         )
