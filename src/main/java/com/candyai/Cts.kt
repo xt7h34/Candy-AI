@@ -393,7 +393,7 @@ fun CtsScreen(shot: Bitmap, onClose: () -> Unit, onOpenFull: (String?) -> Unit) 
         Surface(
             shape = CircleShape,
             color = Color.Black.copy(alpha = 0.45f),
-            modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp).size(40.dp).clip(CircleShape).clickable { onClose() },
+            modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp).size(CandyDims.tapLarge).clip(CircleShape).clickable { onClose() },
         ) {
             Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, stringResource(R.string.cts_close), tint = Color.White) }
         }
@@ -402,10 +402,10 @@ fun CtsScreen(shot: Bitmap, onClose: () -> Unit, onOpenFull: (String?) -> Unit) 
         if (selection == null && !drawingNow && !hasChat) {
             Surface(
                 shape = RoundedCornerShape(50),
-                color = Color.Black.copy(alpha = 0.5f),
+                color = Color.Black.copy(alpha = 0.65f),
                 modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 18.dp).padding(horizontal = 64.dp),
             ) {
-                Text(stringResource(R.string.cts_hint), color = Color.White, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                Text(stringResource(R.string.cts_hint), color = Color.White, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
             }
         }
 

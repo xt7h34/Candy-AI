@@ -1,5 +1,6 @@
 package com.candyai
 
+import androidx.compose.foundation.BorderStroke
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -272,6 +273,7 @@ fun SeeCapsule(
 ) {
     val ctx = LocalContext.current
     val cs = MaterialTheme.colorScheme
+    val candy = LocalCandy.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var input by remember { mutableStateOf("") }
     var focused by remember { mutableStateOf(false) }
@@ -452,6 +454,7 @@ fun SeeCapsule(
             shape = RoundedCornerShape(if (grown) 26.dp else 30.dp),
             color = cs.surfaceContainerHigh,
             shadowElevation = 10.dp,
+            border = BorderStroke(1.dp, cs.outlineVariant),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -465,13 +468,23 @@ fun SeeCapsule(
                             modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                         )
                         if (chat.convId != null) {
-                            TextButton(onClick = { onOpenFull(chat.convId) }) { Text(stringResource(R.string.cts_open_chat), color = cs.primary, fontSize = 13.sp) }
+                            // "open the full chat": a pill with an outline, 44dp tall (it was a small 13sp text button)
+                            Surface(
+                                shape = CircleShape,
+                                color = androidx.compose.ui.graphics.Color.Transparent,
+                                border = BorderStroke(1.dp, candy.cta),
+                                modifier = Modifier.clip(CircleShape).clickable(role = androidx.compose.ui.semantics.Role.Button) { onOpenFull(chat.convId) },
+                            ) {
+                                Box(Modifier.heightIn(min = CandyDims.tap).padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                                    Text(stringResource(R.string.cts_open_chat), color = candy.cta, style = MaterialTheme.typography.labelLarge)
+                                }
+                            }
                         }
                         Icon(
                             if (tall) Icons.Rounded.KeyboardArrowDown else Icons.Rounded.KeyboardArrowUp,
                             contentDescription = null,
                             tint = cs.onSurfaceVariant,
-                            modifier = Modifier.size(32.dp).clip(CircleShape).clickable { tall = !tall }.padding(4.dp),
+                            modifier = Modifier.size(CandyDims.tap).clip(CircleShape).clickable { tall = !tall }.padding(10.dp),
                         )
                     }
                     Column(Modifier.heightIn(max = maxAnswer).verticalScroll(scroll), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -494,13 +507,13 @@ fun SeeCapsule(
                     val active = chat.sending || chat.recording || (!chat.listening && (showMic || input.isNotBlank() || chat.pending.isNotEmpty()))
                     Surface(
                         shape = CircleShape,
-                        color = if (active) cs.primary else cs.surfaceContainerHighest,
-                        modifier = Modifier.size(42.dp).clip(CircleShape).clickable(enabled = active) {
+                        color = if (active) candy.cta else cs.surfaceContainerHighest,
+                        modifier = Modifier.size(52.dp).clip(CircleShape).clickable(enabled = active) {
                             if (chat.sending) chat.stop() else if (chat.recording || showMic) onMic() else submit()
                         },
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            val tint = if (active) cs.onPrimary else cs.onSurfaceVariant
+                            val tint = if (active) candy.onCta else cs.onSurfaceVariant
                             when {
                                 chat.sending || chat.recording -> Icon(Icons.Rounded.Stop, stringResource(R.string.stop), tint = tint)
                                 showMic -> Icon(painterResource(R.drawable.ic_wave), null, tint = tint, modifier = Modifier.size(22.dp))
@@ -516,7 +529,7 @@ fun SeeCapsule(
                             Icons.Rounded.Add,
                             contentDescription = stringResource(R.string.attach),
                             tint = cs.onSurfaceVariant,
-                            modifier = Modifier.size(40.dp).clip(CircleShape).clickable(enabled = !chat.sending) { menu = true }.padding(8.dp),
+                            modifier = Modifier.size(CandyDims.tap).clip(CircleShape).clickable(enabled = !chat.sending) { menu = true }.padding(10.dp),
                         )
                         AttachMenu(
                             expanded = menu,
@@ -534,7 +547,7 @@ fun SeeCapsule(
                             value = input,
                             onValueChange = { input = it.take(1500) },
                             textStyle = LocalTextStyle.current.copy(color = cs.onSurface, fontSize = 15.sp),
-                            cursorBrush = SolidColor(cs.primary),
+                            cursorBrush = SolidColor(candy.cta),
                             maxLines = if (focused) 4 else 1,
                             modifier = Modifier.fillMaxWidth().focusRequester(focus).onFocusChanged {
                                 focused = it.isFocused
@@ -546,7 +559,7 @@ fun SeeCapsule(
                         Icons.Rounded.Translate,
                         contentDescription = stringResource(R.string.cts_translate),
                         tint = cs.onSurfaceVariant,
-                        modifier = Modifier.size(40.dp).clip(CircleShape).clickable(enabled = !chat.sending) { translate() }.padding(8.dp),
+                        modifier = Modifier.size(CandyDims.tap).clip(CircleShape).clickable(enabled = !chat.sending) { translate() }.padding(10.dp),
                     )
                     if (!buttonFirst) actionButton()
                 }
