@@ -1,5 +1,6 @@
 package com.candyai
 
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.MaterialTheme
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -319,21 +320,23 @@ private fun NotebookEditor(notebook: Notebook?, onDismiss: () -> Unit, onSave: (
                     value = name, onValueChange = { name = it.take(40) }, singleLine = true,
                     label = { Text(stringResource(R.string.notella_name), color = c.subtext) },
                     textStyle = TextStyle(textDirection = TextDirection.Content, color = c.text, fontSize = 15.sp),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = c.accent, unfocusedBorderColor = c.border, cursorColor = c.accent),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = c.cta, unfocusedBorderColor = c.border, cursorColor = c.cta),
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ProjectColors.forEachIndexed { i, col ->
-                        Box(Modifier.size(28.dp).clip(CircleShape).background(col).clickable { color = i }, contentAlignment = Alignment.Center) {
-                            if (i == color) Box(Modifier.size(10.dp).clip(CircleShape).background(Color.White))
-                        }
-                    }
-                }
-                if (onDelete != null) TextButton(onClick = { confirmDelete = true }) { Text(stringResource(R.string.delete), color = c.userBubble) }
+                ColorSwatches(ProjectColors.toList(), color, { color = it }, ring = c.cta)
+                if (onDelete != null) TextButton(onClick = { confirmDelete = true }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
             }
         },
-        confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { onSave(name.trim(), color) }) { Text(stringResource(R.string.save), color = c.userBubble) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), color = c.subtext) } },
+        confirmButton = {
+            Button(
+                enabled = name.isNotBlank(),
+                onClick = { onSave(name.trim(), color) },
+                colors = ButtonDefaults.buttonColors(containerColor = c.cta, contentColor = c.onCta),
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) { Text(stringResource(R.string.save)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.cancel), color = c.text) } },
     )
 
     if (confirmDelete && onDelete != null) {
@@ -342,7 +345,7 @@ private fun NotebookEditor(notebook: Notebook?, onDismiss: () -> Unit, onSave: (
             containerColor = c.surface, titleContentColor = c.text, textContentColor = c.subtext,
             title = { Text(stringResource(R.string.notella_delete_title)) },
             text = { Text(stringResource(R.string.notella_delete_body)) },
-            confirmButton = { TextButton(onClick = { confirmDelete = false; onDelete() }) { Text(stringResource(R.string.delete), color = c.userBubble) } },
+            confirmButton = { TextButton(onClick = { confirmDelete = false; onDelete() }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) } },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel), color = c.subtext) } },
         )
     }

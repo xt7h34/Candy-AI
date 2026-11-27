@@ -1,5 +1,8 @@
 package com.candyai
 
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.Surface
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.luminance
@@ -297,67 +300,71 @@ private fun NoteEditor(note: Note?, onDismiss: () -> Unit, onSave: (String, Int,
     var picking by remember { mutableStateOf(false) }
     var leave by remember { mutableStateOf(note != null && HomeGeo.isWaiting(ctx, note.id)) }
     var setup by remember { mutableStateOf(false) }
+    // in the dark theme the dialog is dark too; the note colour then only tints the writing area
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val paper = if (dark) Color(0xFF3A1F4D) else noteColor(color)
+    val ink = if (dark) Color(0xFFF3EAFB) else NoteInk
     if (setup) HomeSetupDialog(onDismiss = { setup = false }, onSaved = { setup = false; leave = true })
     if (picking) DateTimePicker(remindAt, onPicked = { remindAt = it; picking = false }, onDismiss = { picking = false })
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = noteColor(color),
-        titleContentColor = NoteInk,
-        title = { Text(stringResource(if (note == null) R.string.sugar_new else R.string.sugar_edit), color = NoteInk) },
+        containerColor = paper,
+        titleContentColor = ink,
+        title = { Text(stringResource(if (note == null) R.string.sugar_new else R.string.sugar_edit), color = ink) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.fillMaxWidth().height(150.dp)) {
-                    if (text.isEmpty()) Text(stringResource(R.string.sugar_hint), color = NoteInk.copy(alpha = 0.5f), fontSize = 15.sp)
+                Box(
+                    Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(14.dp))
+                        .background(if (dark) noteColor(color).copy(alpha = 0.22f) else Color.Transparent)
+                        .padding(if (dark) 12.dp else 0.dp),
+                ) {
+                    if (text.isEmpty()) Text(stringResource(R.string.sugar_hint), color = ink.copy(alpha = 0.5f), fontSize = 15.sp)
                     BasicTextField(
                         value = text, onValueChange = { text = it.take(2000) },
-                        textStyle = TextStyle(textDirection = TextDirection.Content, color = NoteInk, fontSize = 15.sp, lineHeight = 22.sp),
-                        cursorBrush = SolidColor(NoteInk),
+                        textStyle = TextStyle(textDirection = TextDirection.Content, color = ink, fontSize = 15.sp, lineHeight = 22.sp),
+                        cursorBrush = SolidColor(ink),
                         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
                     )
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    NoteColors.forEachIndexed { i, col ->
-                        Box(
-                            Modifier.size(26.dp).clip(CircleShape).background(col)
-                                .then(if (i == color) Modifier.background(Color.Transparent) else Modifier)
-                                .clickable { color = i },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (i == color) Box(Modifier.size(10.dp).clip(CircleShape).background(NoteInk))
-                        }
-                    }
-                }
-                Row(Modifier.clickable { pinned = !pinned }, verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(18.dp).clip(CircleShape).background(if (pinned) Color(0xFFE5384F) else NoteInk.copy(alpha = 0.2f)))
+                ColorSwatches(NoteColors.toList(), color, { color = it }, ring = ink)
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { pinned = !pinned }, verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(18.dp).clip(CircleShape).background(if (pinned) Color(0xFFE5384F) else ink.copy(alpha = 0.2f)))
                     Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.sugar_pin), color = NoteInk, fontSize = 14.sp)
+                    Text(stringResource(R.string.sugar_pin), color = ink, style = MaterialTheme.typography.bodyMedium)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("🔔", fontSize = 15.sp)
                     Spacer(Modifier.width(8.dp))
-                    Text(remindAt?.let { formatWhen(it) } ?: stringResource(R.string.sugar_reminder), color = NoteInk, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                    TextButton(onClick = { picking = true }) {
-                        Text(stringResource(if (remindAt == null) R.string.sugar_reminder_set else R.string.sugar_reminder_change), color = NoteInk, fontWeight = FontWeight.Bold)
+                    Text(remindAt?.let { formatWhen(it) } ?: stringResource(R.string.sugar_reminder), color = ink, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                    TextButton(onClick = { picking = true }, modifier = Modifier.heightIn(min = 48.dp)) {
+                        Text(stringResource(if (remindAt == null) R.string.sugar_reminder_set else R.string.sugar_reminder_change), color = ink, fontWeight = FontWeight.Bold)
                     }
                 }
-                if (remindAt != null) TextButton(onClick = { remindAt = null }) { Text(stringResource(R.string.sugar_reminder_clear), color = NoteInk.copy(alpha = 0.7f)) }
+                if (remindAt != null) TextButton(onClick = { remindAt = null }) { Text(stringResource(R.string.sugar_reminder_clear), color = ink.copy(alpha = 0.7f)) }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("📍", fontSize = 15.sp)
                     Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.leave_remind), color = NoteInk, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.leave_remind), color = ink, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
                     TextButton(onClick = {
                         if (leave) leave = false
                         else if (HomeGeo.home(ctx) == null || !HomeGeo.hasFine(ctx) || !HomeGeo.hasBackground(ctx)) setup = true
                         else leave = true
-                    }) { Text(stringResource(if (leave) R.string.leave_on else R.string.leave_off), color = NoteInk, fontWeight = FontWeight.Bold) }
+                    }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(if (leave) R.string.leave_on else R.string.leave_off), color = ink, fontWeight = FontWeight.Bold) }
                 }
-                if (leave) TextButton(onClick = { setup = true }) { Text(stringResource(R.string.leave_home_edit), color = NoteInk.copy(alpha = 0.7f)) }
-                if (onDelete != null) TextButton(onClick = onDelete) { Text(stringResource(R.string.delete), color = Color(0xFFB3261E)) }
+                if (leave) TextButton(onClick = { setup = true }) { Text(stringResource(R.string.leave_home_edit), color = ink.copy(alpha = 0.7f)) }
+                if (onDelete != null) TextButton(onClick = onDelete, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
             }
         },
-        confirmButton = { TextButton(enabled = text.isNotBlank(), onClick = { onSave(text.trim(), color, pinned, remindAt, leave) }) { Text(stringResource(R.string.save), color = NoteInk, fontWeight = FontWeight.Bold) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), color = NoteInk.copy(alpha = 0.7f)) } },
+        confirmButton = {
+            Button(
+                enabled = text.isNotBlank(),
+                onClick = { onSave(text.trim(), color, pinned, remindAt, leave) },
+                colors = ButtonDefaults.buttonColors(containerColor = ink, contentColor = paper),
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) { Text(stringResource(R.string.save)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.cancel), color = ink) } },
     )
 }
 
@@ -452,12 +459,12 @@ fun NoteReminderFlow(a: ReminderAsk, onFinished: () -> Unit) {
         else -> androidx.compose.material3.AlertDialog(
             onDismissRequest = onFinished,
             containerColor = androidx.compose.ui.graphics.Color.White,
-            title = { Text(stringResource(R.string.battery_title), color = NoteInk) },
-            text = { Text(stringResource(R.string.battery_body), color = NoteInk.copy(alpha = 0.75f)) },
+            title = { Text(stringResource(R.string.battery_title), color = ink) },
+            text = { Text(stringResource(R.string.battery_body), color = ink.copy(alpha = 0.75f)) },
             confirmButton = {
                 TextButton(onClick = { Reminders.askBatteryExemption(ctx); onFinished() }) { Text(stringResource(R.string.battery_allow), color = LocalCandy.current.userBubble, fontWeight = FontWeight.Bold) }
             },
-            dismissButton = { TextButton(onClick = onFinished) { Text(stringResource(R.string.battery_later), color = NoteInk.copy(alpha = 0.7f)) } },
+            dismissButton = { TextButton(onClick = onFinished) { Text(stringResource(R.string.battery_later), color = ink.copy(alpha = 0.7f)) } },
         )
     }
 }

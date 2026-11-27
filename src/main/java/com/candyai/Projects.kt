@@ -1,5 +1,6 @@
 package com.candyai
 
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -232,7 +233,7 @@ private fun ProjectEditor(project: Project?, onDismiss: () -> Unit, onSave: (Str
     var color by remember { mutableIntStateOf(project?.color ?: 0) }
     var instr by remember { mutableStateOf(project?.instructions ?: "") }
     var confirmDelete by remember { mutableStateOf(false) }
-    val fieldColors = OutlinedTextFieldDefaults.colors(focusedBorderColor = c.accent, unfocusedBorderColor = c.border, cursorColor = c.accent)
+    val fieldColors = OutlinedTextFieldDefaults.colors(focusedBorderColor = c.cta, unfocusedBorderColor = c.border, cursorColor = c.cta)
     val fieldStyle = TextStyle(textDirection = TextDirection.Content, color = c.text, fontSize = 15.sp)
 
     AlertDialog(
@@ -245,36 +246,30 @@ private fun ProjectEditor(project: Project?, onDismiss: () -> Unit, onSave: (Str
                 OutlinedTextField(
                     value = name, onValueChange = { name = it.take(40) }, singleLine = true,
                     label = { Text(stringResource(R.string.project_name), color = c.subtext) },
-                    textStyle = fieldStyle, colors = fieldColors, modifier = Modifier.fillMaxWidth(),
+                    textStyle = fieldStyle, colors = fieldColors, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth(),
                 )
-                Text(stringResource(R.string.project_color), color = c.subtext, fontSize = 12.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ProjectColors.forEachIndexed { i, col ->
-                        Box(
-                            Modifier.size(28.dp).clip(CircleShape).background(col)
-                                .then(if (i == color) Modifier.padding(0.dp) else Modifier)
-                                .clickable { color = i },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (i == color) Box(Modifier.size(10.dp).clip(CircleShape).background(Color.White))
-                        }
-                    }
-                }
+                Text(stringResource(R.string.project_color), color = c.subtext, style = MaterialTheme.typography.bodySmall)
+                ColorSwatches(ProjectColors.toList(), color, { color = it }, ring = c.cta)
                 OutlinedTextField(
                     value = instr, onValueChange = { instr = it.take(4000) }, minLines = 3, maxLines = 6,
                     label = { Text(stringResource(R.string.project_instructions), color = c.subtext) },
                     placeholder = { Text(stringResource(R.string.project_instructions_hint), color = c.subtext, fontSize = 13.sp) },
-                    textStyle = fieldStyle, colors = fieldColors, modifier = Modifier.fillMaxWidth(),
+                    textStyle = fieldStyle, colors = fieldColors, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth(),
                 )
                 if (onDelete != null) {
-                    TextButton(onClick = { confirmDelete = true }) { Text(stringResource(R.string.delete), color = c.userBubble) }
+                    TextButton(onClick = { confirmDelete = true }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
                 }
             }
         },
         confirmButton = {
-            TextButton(enabled = name.isNotBlank(), onClick = { onSave(name.trim(), color, instr.trim()) }) { Text(stringResource(R.string.save), color = c.userBubble) }
+            Button(
+                enabled = name.isNotBlank(),
+                onClick = { onSave(name.trim(), color, instr.trim()) },
+                colors = ButtonDefaults.buttonColors(containerColor = c.cta, contentColor = c.onCta),
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) { Text(stringResource(R.string.save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), color = c.subtext) } },
+        dismissButton = { TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.cancel), color = c.text) } },
     )
 
     if (confirmDelete && onDelete != null) {
@@ -283,7 +278,7 @@ private fun ProjectEditor(project: Project?, onDismiss: () -> Unit, onSave: (Str
             containerColor = c.surface, titleContentColor = c.text, textContentColor = c.subtext,
             title = { Text(stringResource(R.string.project_delete_title)) },
             text = { Text(stringResource(R.string.project_delete_body)) },
-            confirmButton = { TextButton(onClick = { confirmDelete = false; onDelete() }) { Text(stringResource(R.string.delete), color = c.userBubble) } },
+            confirmButton = { TextButton(onClick = { confirmDelete = false; onDelete() }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) } },
             dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel), color = c.subtext) } },
         )
     }

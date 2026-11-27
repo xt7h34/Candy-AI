@@ -1,5 +1,7 @@
 package com.candyai
 
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.foundation.border
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextAlign
@@ -217,6 +219,75 @@ fun ListCard(
                 Spacer(Modifier.width(8.dp))
             }
             Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, tint = c.subtext)
+        }
+    }
+}
+
+/** A pill that holds a few choices side by side (e.g. Preview | Code); the picked one is filled. Every choice is 44dp tall. */
+@Composable
+fun PillTabs(labels: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+    val c = LocalCandy.current
+    Row(
+        modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        labels.forEachIndexed { i, label ->
+            val on = i == selected
+            Box(
+                Modifier.heightIn(min = CandyDims.tap).clip(RoundedCornerShape(50))
+                    .background(if (on) c.cta else Color.Transparent)
+                    .clickable(role = Role.Tab) { onSelect(i) }.padding(horizontal = 18.dp),
+                contentAlignment = Alignment.Center,
+            ) { Text(label, color = if (on) c.onCta else c.text, style = MaterialTheme.typography.labelLarge) }
+        }
+    }
+}
+
+/** One chip of a scrolling row (e.g. the files of a jar). 44dp tall; [mono] writes it in the code font. */
+@Composable
+fun ChipPill(text: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, mono: Boolean = false) {
+    val c = LocalCandy.current
+    val shape = RoundedCornerShape(50)
+    val base = MaterialTheme.typography.labelLarge
+    Surface(
+        shape = shape,
+        color = if (selected) c.cta else c.surface,
+        border = BorderStroke(1.dp, c.border),
+        modifier = modifier.clip(shape).clickable(role = Role.Tab, onClick = onClick),
+    ) {
+        Box(Modifier.heightIn(min = CandyDims.tap).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+            Text(
+                text,
+                color = if (selected) c.onCta else c.text,
+                style = if (mono) base.copy(fontFamily = FontFamily.Monospace) else base,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+/** Colour choices as round swatches: the visible circle is 30dp but each one has a 44dp touch area; the picked one gets a ring. */
+@Composable
+fun ColorSwatches(colors: List<Color>, selected: Int, onSelect: (Int) -> Unit, ring: Color, modifier: Modifier = Modifier) {
+    Column(modifier) {
+        colors.withIndex().chunked(6).forEach { rowItems ->
+            Row {
+                rowItems.forEach { (i, col) ->
+                    Box(
+                        Modifier.size(CandyDims.tap).clip(CircleShape).clickable(role = Role.RadioButton) { onSelect(i) },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (i == selected) {
+                            Box(Modifier.size(38.dp).border(2.5.dp, ring, CircleShape).padding(4.dp)) {
+                                Box(Modifier.fillMaxSize().clip(CircleShape).background(col))
+                            }
+                        } else {
+                            Box(Modifier.size(30.dp).clip(CircleShape).background(col))
+                        }
+                    }
+                }
+            }
         }
     }
 }

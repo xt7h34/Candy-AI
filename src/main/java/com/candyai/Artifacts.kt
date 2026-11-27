@@ -1,5 +1,6 @@
 package com.candyai
 
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.MaterialTheme
 import android.annotation.SuppressLint
 import android.content.Context
@@ -337,13 +338,7 @@ fun ArtifactViewer(id: String, onBack: () -> Unit, onChanged: () -> Unit = {}) {
     }
 
     Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = c.text) }
-            Text(
-                a?.title ?: "", color = c.text, fontSize = 18.sp, fontWeight = FontWeight.Bold,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-                style = TextStyle(textDirection = TextDirection.Content),
-            )
+        ScreenHeader(a?.title ?: "", onBack) {
             if (a != null) {
                 IconButton(onClick = { copyRawText(ctx, content) }) { Icon(Icons.Rounded.ContentCopy, stringResource(R.string.artifact_copy), tint = c.subtext) }
                 IconButton(onClick = { saver.launch("${a.title.replace(Regex("[\\\\/:*?\"<>|]"), " ").trim().ifBlank { "candy" }}.${extFor(a.type, a.lang)}") }) {
@@ -372,8 +367,8 @@ fun ArtifactViewer(id: String, onBack: () -> Unit, onChanged: () -> Unit = {}) {
                             onClick = { menu = false; renaming = true },
                         )
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.delete), color = Color(0xFFD64545)) },
-                            leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = Color(0xFFD64545)) },
+                            text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
+                            leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = MaterialTheme.colorScheme.error) },
                             onClick = { menu = false; deleting = true },
                         )
                     }
@@ -389,35 +384,28 @@ fun ArtifactViewer(id: String, onBack: () -> Unit, onChanged: () -> Unit = {}) {
             a == null -> Box(Modifier.fillMaxSize()) { CircularProgressIndicator(Modifier.align(Alignment.Center).size(28.dp), color = c.accent, strokeWidth = 3.dp) }
             else -> {
                 if (viewV != 0 && viewV != a.current) {
-                    Row(Modifier.fillMaxWidth().background(c.surface).padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.artifact_old_version, viewV), color = c.text, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                        TextButton(onClick = { viewV = 0; oldContent = null }) { Text(stringResource(R.string.artifact_back_current), color = c.subtext, fontSize = 13.sp) }
-                        TextButton(onClick = {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clip(RoundedCornerShape(14.dp)).background(c.surface).padding(horizontal = 12.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(stringResource(R.string.artifact_old_version, viewV), color = c.text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                        TextButton(onClick = { viewV = 0; oldContent = null }, modifier = Modifier.heightIn(min = 44.dp)) { Text(stringResource(R.string.artifact_back_current), color = c.subtext, style = MaterialTheme.typography.labelLarge) }
+                        Button(
+                            colors = ButtonDefaults.buttonColors(containerColor = c.cta, contentColor = c.onCta),
+                            modifier = Modifier.heightIn(min = 44.dp),
+                            onClick = {
                             scope.launch {
                                 try {
                                     Api.restoreArtifact(a.id, viewV)
                                     viewV = 0; oldContent = null; reload++; onChanged()
                                 } catch (e: Exception) { Toast.makeText(ctx, errorMessage(ctx, e), Toast.LENGTH_SHORT).show() }
                             }
-                        }) { Text(stringResource(R.string.artifact_restore), color = c.userBubble, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                        }) { Text(stringResource(R.string.artifact_restore)) }
                     }
                 }
                 val canPreview = a.type == "html" || a.type == "svg"
                 if (canPreview) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        for ((i, label) in listOf(R.string.artifact_preview, R.string.artifact_code).withIndex()) {
-                            Surface(
-                                shape = RoundedCornerShape(50), color = if (tab == i) c.userBubble else c.surface,
-                                border = BorderStroke(1.dp, c.border),
-                                modifier = Modifier.clip(RoundedCornerShape(50)).clickable { tab = i },
-                            ) {
-                                Text(
-                                    stringResource(label), color = if (tab == i) c.onUserBubble else c.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 7.dp),
-                                )
-                            }
-                        }
-                    }
+                    PillTabs(listOf(stringResource(R.string.artifact_preview), stringResource(R.string.artifact_code)), tab) { tab = it }
                 }
                 Box(Modifier.weight(1f).fillMaxWidth().padding(top = 6.dp)) {
                     if (canPreview && tab == 0) {
@@ -489,7 +477,7 @@ fun ArtifactViewer(id: String, onBack: () -> Unit, onChanged: () -> Unit = {}) {
                     scope.launch {
                         try { Api.deleteArtifact(a.id); onChanged(); onBack() } catch (e: Exception) { Toast.makeText(ctx, errorMessage(ctx, e), Toast.LENGTH_SHORT).show() }
                     }
-                }) { Text(stringResource(R.string.delete), color = Color(0xFFD64545)) }
+                }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { deleting = false }) { Text(stringResource(R.string.cancel)) } },
         )

@@ -1,5 +1,8 @@
 package com.candyai
 
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -71,59 +74,68 @@ fun AskCard(
     onBack: () -> Unit = onClose,
 ) {
     val c = LocalCandy.current
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val card = if (dark) Color(0xFF3A1F4D) else Color.White
+    val ink = if (dark) Color(0xFFF3EAFB) else CardInk
+    val muted = if (dark) Color(0xFFC9B6DB) else Color(0xFF6B5B5F)
+    val track = if (dark) Color(0xFF5A3573) else Color(0xFFE6E1E4)
     var picked by remember { mutableIntStateOf(-1) }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box(Modifier.fillMaxSize().padding(horizontal = 26.dp), contentAlignment = Alignment.Center) {
             // the tilted card behind
             Box(
                 Modifier.fillMaxWidth().height(380.dp).graphicsLayer { rotationZ = -5f; translationX = -12f }
-                    .clip(RoundedCornerShape(28.dp)).background(Color.White.copy(alpha = 0.55f)),
+                    .clip(RoundedCornerShape(28.dp)).background(Color.White.copy(alpha = if (dark) 0.12f else 0.55f)),
             )
             Column(
                 Modifier.fillMaxWidth().shadow(18.dp, RoundedCornerShape(28.dp), ambientColor = Color(0x44000000), spotColor = Color(0x44000000))
-                    .clip(RoundedCornerShape(28.dp)).background(Color.White).padding(22.dp),
+                    .clip(RoundedCornerShape(28.dp)).background(card).padding(22.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         for (i in 1..total) {
-                            Box(Modifier.weight(1f).height(4.dp).clip(CircleShape).background(if (i <= step) c.userBubble else Color(0xFFE6E1E4)))
+                            Box(Modifier.weight(1f).height(4.dp).clip(CircleShape).background(if (i <= step) c.cta else track))
                         }
                     }
                     Spacer(Modifier.width(14.dp))
                     Box(
-                        Modifier.size(24.dp).clip(CircleShape).background(Color(0xFFB9B0B5)).clickable(onClick = onClose),
+                        Modifier.size(CandyDims.tap).clip(CircleShape).background(track)
+                            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClose),
                         contentAlignment = Alignment.Center,
-                    ) { Text("✕", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+                    ) { Text("✕", color = ink, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
                 }
                 Spacer(Modifier.height(22.dp))
-                Text(stringResource(R.string.sugar_ask_label, step), color = CardInk, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.sugar_ask_label, step), color = ink, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(8.dp))
-                Text(question, color = CardInk, fontSize = 19.sp, lineHeight = 27.sp, style = TextStyle(textDirection = TextDirection.Content))
+                Text(question, color = ink, fontSize = 19.sp, lineHeight = 27.sp, style = TextStyle(textDirection = TextDirection.Content))
                 Spacer(Modifier.height(18.dp))
-                Text(stringResource(R.string.sugar_ask_hint), color = CardMuted, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                Text(stringResource(R.string.sugar_ask_hint), color = muted, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
                 Spacer(Modifier.height(6.dp))
                 options.forEachIndexed { i, label ->
                     Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { picked = i }.padding(vertical = 10.dp),
+                        Modifier.fillMaxWidth().padding(bottom = 8.dp).heightIn(min = 52.dp).clip(RoundedCornerShape(12.dp))
+                            .border(1.dp, if (picked == i) c.cta else track, RoundedCornerShape(12.dp))
+                            .clickable { picked = i }.padding(horizontal = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Box(
-                            Modifier.size(20.dp).clip(CircleShape).border(1.6.dp, if (picked == i) c.userBubble else CardInk, CircleShape),
+                            Modifier.size(20.dp).clip(CircleShape).border(1.6.dp, if (picked == i) c.cta else ink, CircleShape),
                             contentAlignment = Alignment.Center,
-                        ) { if (picked == i) Box(Modifier.size(10.dp).clip(CircleShape).background(c.userBubble)) }
+                        ) { if (picked == i) Box(Modifier.size(10.dp).clip(CircleShape).background(c.cta)) }
                         Spacer(Modifier.width(12.dp))
-                        Text(label, color = CardInk, fontSize = 15.sp, style = TextStyle(textDirection = TextDirection.Content))
+                        Text(label, color = ink, fontSize = 15.sp, style = TextStyle(textDirection = TextDirection.Content))
                     }
                 }
                 Spacer(Modifier.height(18.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = onBack) { Text(backLabel, color = CardInk, fontSize = 15.sp) }
+                    TextButton(onClick = onBack) { Text(backLabel, color = ink, fontSize = 15.sp) }
                     Spacer(Modifier.width(8.dp))
                     Button(
                         enabled = picked >= 0,
                         onClick = { onNext(picked) },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = c.userBubble, contentColor = Color.White, disabledContainerColor = Color(0xFFE6E1E4), disabledContentColor = Color.White),
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.heightIn(min = 52.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = c.cta, contentColor = c.onCta, disabledContainerColor = track, disabledContentColor = muted),
                     ) { Text(nextLabel, fontSize = 15.sp, fontWeight = FontWeight.SemiBold) }
                 }
             }
@@ -135,24 +147,29 @@ fun AskCard(
 @Composable
 fun DoneSheet(title: String, body: String, buttonLabel: String = stringResource(R.string.sugar_done_btn), onDone: () -> Unit) {
     val c = LocalCandy.current
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val card = if (dark) Color(0xFF3A1F4D) else Color.White
+    val ink = if (dark) Color(0xFFF3EAFB) else CardInk
+    val muted = if (dark) Color(0xFFC9B6DB) else Color(0xFF6B5B5F)
+    val track = if (dark) Color(0xFF5A3573) else Color(0xFFE6E1E4)
     Dialog(onDismissRequest = onDone, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onDone), contentAlignment = Alignment.BottomCenter) {
             Column(
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp).navigationBarsPadding().padding(bottom = 12.dp)
-                    .clip(RoundedCornerShape(30.dp)).background(Color.White)
+                    .clip(RoundedCornerShape(30.dp)).background(card)
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { }
                     .padding(horizontal = 24.dp, vertical = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                ScallopedCheck(c.userBubble)
+                ScallopedCheck(c.cta)
                 Spacer(Modifier.height(16.dp))
-                Text(title, color = CardInk, fontSize = 24.sp, fontWeight = FontWeight.Medium)
+                Text(title, color = ink, fontSize = 24.sp, fontWeight = FontWeight.Medium)
                 Spacer(Modifier.height(8.dp))
-                Text(body, color = CardMuted, fontSize = 14.sp, lineHeight = 20.sp, style = TextStyle(textDirection = TextDirection.Content, textAlign = androidx.compose.ui.text.style.TextAlign.Center))
+                Text(body, color = muted, fontSize = 14.sp, lineHeight = 20.sp, style = TextStyle(textDirection = TextDirection.Content, textAlign = androidx.compose.ui.text.style.TextAlign.Center))
                 Spacer(Modifier.height(26.dp))
                 Button(
-                    onClick = onDone, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = CardInk, contentColor = Color.White),
+                    onClick = onDone, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(containerColor = c.cta, contentColor = c.onCta),
                 ) { Text(buttonLabel, fontSize = 15.sp) }
             }
         }

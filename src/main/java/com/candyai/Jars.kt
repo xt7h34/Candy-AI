@@ -1,5 +1,8 @@
 package com.candyai
 
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.MaterialTheme
 import android.content.Context
 import android.content.Intent
@@ -224,13 +227,7 @@ fun JarViewer(id: String, onBack: () -> Unit, onChanged: () -> Unit = {}) {
     }
 
     Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = c.text) }
-            Text(
-                j?.title ?: "", color = c.text, fontSize = 18.sp, fontWeight = FontWeight.Bold,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-                style = TextStyle(textDirection = TextDirection.Content),
-            )
+        ScreenHeader(j?.title ?: "", onBack) {
             if (j != null) {
                 IconButton(onClick = { if (file != null) copyRawText(ctx, file.content) }) { Icon(Icons.Rounded.ContentCopy, stringResource(R.string.artifact_copy), tint = c.subtext) }
                 IconButton(onClick = { saver.launch("${j.title.replace(Regex("[\\\\/:*?\"<>|]"), " ").trim().ifBlank { "candy-jar" }}.zip") }) {
@@ -250,8 +247,8 @@ fun JarViewer(id: String, onBack: () -> Unit, onChanged: () -> Unit = {}) {
                             onClick = { menu = false; renaming = true },
                         )
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.delete), color = Color(0xFFD64545)) },
-                            leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = Color(0xFFD64545)) },
+                            text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
+                            leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = MaterialTheme.colorScheme.error) },
                             onClick = { menu = false; deleting = true },
                         )
                     }
@@ -267,37 +264,30 @@ fun JarViewer(id: String, onBack: () -> Unit, onChanged: () -> Unit = {}) {
             j == null -> Box(Modifier.fillMaxSize()) { CircularProgressIndicator(Modifier.align(Alignment.Center).size(28.dp), color = c.accent, strokeWidth = 3.dp) }
             else -> {
                 if (viewV != 0 && viewV != j.current) {
-                    Row(Modifier.fillMaxWidth().background(c.surface).padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.artifact_old_version, viewV), color = c.text, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                        TextButton(onClick = { viewV = 0; oldFiles = null }) { Text(stringResource(R.string.artifact_back_current), color = c.subtext, fontSize = 13.sp) }
-                        TextButton(onClick = {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clip(RoundedCornerShape(14.dp)).background(c.surface).padding(horizontal = 12.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(stringResource(R.string.artifact_old_version, viewV), color = c.text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                        TextButton(onClick = { viewV = 0; oldFiles = null }, modifier = Modifier.heightIn(min = 44.dp)) { Text(stringResource(R.string.artifact_back_current), color = c.subtext, style = MaterialTheme.typography.labelLarge) }
+                        Button(
+                            colors = ButtonDefaults.buttonColors(containerColor = c.cta, contentColor = c.onCta),
+                            modifier = Modifier.heightIn(min = 44.dp),
+                            onClick = {
                             scope.launch {
                                 try {
                                     Api.restoreJar(j.id, viewV)
                                     viewV = 0; oldFiles = null; reload++; onChanged()
                                 } catch (e: Exception) { Toast.makeText(ctx, errorMessage(ctx, e), Toast.LENGTH_SHORT).show() }
                             }
-                        }) { Text(stringResource(R.string.artifact_restore), color = c.userBubble, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+                        }) { Text(stringResource(R.string.artifact_restore)) }
                     }
                 }
                 if (files.isEmpty()) {
                     Text(stringResource(R.string.jar_empty), color = c.subtext, fontSize = 14.sp, modifier = Modifier.fillMaxWidth().padding(32.dp))
                 } else {
                     if (j.versions.size > 1) {
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            for ((isDiff, label) in listOf(false to R.string.jar_view_code, true to R.string.jar_view_diff)) {
-                                Surface(
-                                    shape = RoundedCornerShape(50), color = if (diffMode == isDiff) c.userBubble else c.surface,
-                                    border = BorderStroke(1.dp, c.border),
-                                    modifier = Modifier.clip(RoundedCornerShape(50)).clickable { diffMode = isDiff },
-                                ) {
-                                    Text(
-                                        stringResource(label), color = if (diffMode == isDiff) c.onUserBubble else c.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 7.dp),
-                                    )
-                                }
-                            }
-                        }
+                        PillTabs(listOf(stringResource(R.string.jar_view_code), stringResource(R.string.jar_view_diff)), if (diffMode) 1 else 0) { diffMode = it == 1 }
                     }
                     val before = prevFiles
                     if (diffMode && before != null) {
@@ -308,17 +298,7 @@ fun JarViewer(id: String, onBack: () -> Unit, onChanged: () -> Unit = {}) {
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         for (f in files) {
                             val on = f.path == file?.path
-                            Surface(
-                                shape = RoundedCornerShape(50), color = if (on) c.userBubble else c.surface,
-                                border = BorderStroke(1.dp, c.border),
-                                modifier = Modifier.clip(RoundedCornerShape(50)).clickable { sel = f.path },
-                            ) {
-                                Text(
-                                    f.path, color = if (on) c.onUserBubble else c.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
-                                    fontFamily = FontFamily.Monospace, maxLines = 1,
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
-                                )
-                            }
+                            ChipPill(f.path, on, { sel = f.path }, mono = true)
                         }
                     }
                     Box(Modifier.weight(1f).fillMaxWidth().padding(top = 6.dp)) {
@@ -389,7 +369,7 @@ fun JarViewer(id: String, onBack: () -> Unit, onChanged: () -> Unit = {}) {
                     scope.launch {
                         try { Api.deleteJar(j.id); onChanged(); onBack() } catch (e: Exception) { Toast.makeText(ctx, errorMessage(ctx, e), Toast.LENGTH_SHORT).show() }
                     }
-                }) { Text(stringResource(R.string.delete), color = Color(0xFFD64545)) }
+                }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = { TextButton(onClick = { deleting = false }) { Text(stringResource(R.string.cancel)) } },
         )
@@ -488,7 +468,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.JarDiffView(now: List
         out
     }
     val green = Color(0xFF2E9E5B)
-    val red = Color(0xFFD64545)
+    val red = MaterialTheme.colorScheme.error
     Box(Modifier.weight(1f).fillMaxWidth().padding(top = 6.dp)) {
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             SelectionContainer {
