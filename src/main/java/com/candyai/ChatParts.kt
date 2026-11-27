@@ -103,6 +103,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -157,6 +160,42 @@ internal fun AiTypingBubble(label: String) {
                 TypingDots()
                 Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+    }
+}
+
+/** What Candy is doing right now, next to the menu button. Screen readers announce it when it changes. */
+@Composable
+internal fun StatusChip(pose: StagePose) {
+    val cs = MaterialTheme.colorScheme
+    val candy = LocalCandy.current
+    val text = stringResource(
+        when (pose) {
+            StagePose.Idle -> R.string.ai_status_idle
+            StagePose.Listening -> R.string.ai_status_listen
+            StagePose.Thinking -> R.string.ai_status_think
+            StagePose.Searching -> R.string.ai_status_search
+            StagePose.Success -> R.string.ai_status_done
+            StagePose.Sorry -> R.string.ai_status_sorry
+        },
+    )
+    val dot = when (pose) {
+        StagePose.Idle, StagePose.Success -> Color(0xFF2E9E5B)
+        StagePose.Sorry -> cs.error
+        else -> candy.cta
+    }
+    Surface(
+        shape = CircleShape,
+        color = cs.background.copy(alpha = 0.88f),
+        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+    ) {
+        Row(
+            Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(Modifier.size(8.dp).clip(CircleShape).background(dot))
+            Text(text, color = cs.onBackground, style = MaterialTheme.typography.labelMedium, maxLines = 1)
         }
     }
 }

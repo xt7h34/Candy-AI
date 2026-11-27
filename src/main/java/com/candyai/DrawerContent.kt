@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -127,61 +129,24 @@ fun ConversationsDrawer(
         Text(
             stringResource(R.string.conversations),
             color = c.text,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
         )
 
-        Surface(
-            shape = RoundedCornerShape(14.dp), color = c.surface, border = BorderStroke(1.dp, c.border),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp).padding(bottom = 8.dp).clip(RoundedCornerShape(14.dp)).combinedClickable(onClick = onProjects),
+        // the five tools as tiles (two rows instead of five full rows), so the chat list gets the room
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 10.dp).padding(bottom = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.ic_projects), null, Modifier.size(30.dp))
-                Spacer(Modifier.width(12.dp))
-                Text(stringResource(R.string.projects), color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DrawerTile(R.drawable.ic_projects, stringResource(R.string.projects), onProjects, Modifier.weight(1f))
+                DrawerTile(R.drawable.ic_notella, stringResource(R.string.notella), onNotella, Modifier.weight(1f))
+                DrawerTile(R.drawable.ic_sugarnote, stringResource(R.string.sugar), onSugar, Modifier.weight(1f))
             }
-        }
-        Surface(
-            shape = RoundedCornerShape(14.dp), color = c.surface, border = BorderStroke(1.dp, c.border),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp).padding(bottom = 8.dp).clip(RoundedCornerShape(14.dp)).combinedClickable(onClick = onNotella),
-        ) {
-            Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.ic_notella), null, Modifier.size(30.dp))
-                Spacer(Modifier.width(12.dp))
-                Text(stringResource(R.string.notella), color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            }
-        }
-        Surface(
-            shape = RoundedCornerShape(14.dp), color = c.surface, border = BorderStroke(1.dp, c.border),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp).padding(bottom = 8.dp).clip(RoundedCornerShape(14.dp)).combinedClickable(onClick = onSugar),
-        ) {
-            Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.ic_sugarnote), null, Modifier.size(30.dp))
-                Spacer(Modifier.width(12.dp))
-                Text(stringResource(R.string.sugar), color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            }
-        }
-
-        Surface(
-            shape = RoundedCornerShape(14.dp), color = c.surface, border = BorderStroke(1.dp, c.border),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp).padding(bottom = 8.dp).clip(RoundedCornerShape(14.dp)).combinedClickable(onClick = onArtifacts),
-        ) {
-            Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(R.drawable.ic_artifacts), null, Modifier.size(30.dp))
-                Spacer(Modifier.width(12.dp))
-                Text(stringResource(R.string.artifacts), color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            }
-        }
-
-        Surface(
-            shape = RoundedCornerShape(14.dp), color = c.surface, border = BorderStroke(1.dp, c.border),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp).padding(bottom = 8.dp).clip(RoundedCornerShape(14.dp)).combinedClickable(onClick = onJars),
-        ) {
-            Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) { Text("🫙", fontSize = 22.sp) }
-                Spacer(Modifier.width(12.dp))
-                Text(stringResource(R.string.jars), color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DrawerTile(R.drawable.ic_artifacts, stringResource(R.string.artifacts), onArtifacts, Modifier.weight(1f))
+                DrawerTile(null, stringResource(R.string.jars), onJars, Modifier.weight(1f))
+                Spacer(Modifier.weight(1f))
             }
         }
 
@@ -193,14 +158,14 @@ fun ConversationsDrawer(
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(error ?: "", color = c.subtext, fontSize = 14.sp)
+                    Text(error ?: "", color = c.subtext, style = MaterialTheme.typography.bodyMedium)
                     TextButton(onClick = { reload++ }) { Text(stringResource(R.string.retry), color = c.userBubble) }
                 }
                 list == null -> CircularProgressIndicator(Modifier.align(Alignment.Center).size(28.dp), color = c.accent, strokeWidth = 3.dp)
                 list.isEmpty() -> Text(
                     stringResource(R.string.empty_list),
                     color = c.subtext,
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.align(Alignment.Center).padding(24.dp),
                 )
                 else -> LazyColumn(Modifier.fillMaxSize().padding(horizontal = 10.dp)) {
@@ -234,16 +199,15 @@ fun ConversationsDrawer(
                                         Text(
                                             conv.title,
                                             color = c.text,
-                                            fontSize = 15.sp,
-                                            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,
-                                            style = TextStyle(textDirection = TextDirection.Content),
+                                            style = (if (active) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge)
+                                                .copy(textDirection = TextDirection.Content),
                                         )
                                         Text(
                                             DateUtils.getRelativeTimeSpanString(conv.updatedAt, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString(),
                                             color = c.subtext,
-                                            fontSize = 12.sp,
+                                            style = MaterialTheme.typography.bodySmall,
                                         )
                                     }
                                 }
@@ -281,8 +245,8 @@ fun ConversationsDrawer(
                                     },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.delete), color = c.userBubble) },
-                                    leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = c.userBubble) },
+                                    text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
+                                    leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = MaterialTheme.colorScheme.error) },
                                     onClick = {
                                         menuFor = null
                                         deleting = conv
@@ -308,11 +272,11 @@ fun ConversationsDrawer(
             Button(
                 onClick = onNew,
                 modifier = Modifier.weight(1f).height(48.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = c.accent, contentColor = c.onAccent),
+                colors = ButtonDefaults.buttonColors(containerColor = c.cta, contentColor = c.onCta),
             ) {
                 Icon(Icons.Rounded.Add, null)
                 Spacer(Modifier.width(6.dp))
-                Text(stringResource(R.string.new_chat), fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.new_chat))
             }
         }
     }
@@ -374,7 +338,7 @@ fun ConversationsDrawer(
                         } catch (_: Exception) { }
                         reload++
                     }
-                }) { Text(stringResource(R.string.delete), color = c.userBubble) }
+                }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
                 TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.cancel), color = c.subtext) }
@@ -394,5 +358,38 @@ fun ConversationsDrawer(
                 }
             },
         )
+    }
+}
+
+/** One tool in the drawer (projects, Notella...): a picture over a short name. [icon] null means the jar emoji. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun DrawerTile(icon: Int?, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val c = LocalCandy.current
+    val shape = RoundedCornerShape(16.dp)
+    Surface(
+        shape = shape,
+        color = c.surface,
+        border = BorderStroke(1.dp, c.border),
+        modifier = modifier.clip(shape).combinedClickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 12.dp).heightIn(min = 56.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterVertically),
+        ) {
+            if (icon != null) {
+                androidx.compose.foundation.Image(androidx.compose.ui.res.painterResource(icon), null, Modifier.size(30.dp))
+            } else {
+                Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) { Text("🫙", style = MaterialTheme.typography.titleLarge) }
+            }
+            Text(
+                label,
+                color = c.text,
+                style = MaterialTheme.typography.labelMedium,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                maxLines = 2,
+            )
+        }
     }
 }

@@ -57,4 +57,10 @@
     <string name="voice_too_short">The recording is too short</string>
     <string name="ai_act_more">More</string>
     <string name="ai_act_record">Voice message</string>
+    <string name="ai_status_idle">Candy · ready</string>
+    <string name="ai_status_listen">Candy · listening…</string>
+    <string name="ai_status_think">Candy · thinking…</string>
+    <string name="ai_status_search">Candy · searching…</string>
+    <string name="ai_status_done">Candy · done</string>
+    <string name="ai_status_sorry">Candy · something went wrong</string>
 </resources>

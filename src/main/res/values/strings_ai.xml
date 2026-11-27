@@ -57,4 +57,10 @@
     <string name="voice_too_short">التسجيل قصير أوي</string>
     <string name="ai_act_more">المزيد</string>
     <string name="ai_act_record">تسجيل صوتي</string>
+    <string name="ai_status_idle">كاندي · جاهزة</string>
+    <string name="ai_status_listen">كاندي · بتسمعك…</string>
+    <string name="ai_status_think">كاندي · بتفكر…</string>
+    <string name="ai_status_search">كاندي · بتبحث…</string>
+    <string name="ai_status_done">كاندي · خلّصت</string>
+    <string name="ai_status_sorry">كاندي · حصلت مشكلة</string>
 </resources>

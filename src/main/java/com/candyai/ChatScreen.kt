@@ -622,16 +622,29 @@ fun ChatScreen(
     ) {
         CandyStage(animated, talkTick, talkMs, lastActive, stagePose)
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
-            // only the menu button, so Candy stays fully visible; it sits on the same side as the drawer
-            Box(
-                Modifier.align(if (menuOnLeft == (LocalLayoutDirection.current == LayoutDirection.Rtl)) Alignment.End else Alignment.Start)
-                    .padding(horizontal = 10.dp, vertical = 8.dp)
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(cs.background.copy(alpha = 0.88f)),
-                contentAlignment = Alignment.Center,
+            // the menu button and a small status chip (what Candy is doing); both stay small so Candy stays visible.
+            // The menu sits on the same side as the drawer.
+            val menuAtStart = menuOnLeft != (LocalLayoutDirection.current == LayoutDirection.Rtl)
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+                horizontalArrangement = if (menuAtStart) Arrangement.spacedBy(8.dp) else Arrangement.spacedBy(8.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                AppIconButton(Icons.Rounded.Menu, stringResource(R.string.menu), onMenu, tint = cs.onBackground)
+                val menuButton: @Composable () -> Unit = {
+                    Box(
+                        Modifier.size(48.dp).clip(CircleShape).background(cs.background.copy(alpha = 0.88f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        AppIconButton(Icons.Rounded.Menu, stringResource(R.string.menu), onMenu, tint = cs.onBackground)
+                    }
+                }
+                if (menuAtStart) {
+                    menuButton()
+                    StatusChip(stagePose)
+                } else {
+                    StatusChip(stagePose)
+                    menuButton()
+                }
             }
 
             if (voice.ttsLimit > 0 && voice.ttsLeft <= 5) {
