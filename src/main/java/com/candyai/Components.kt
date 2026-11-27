@@ -1,5 +1,6 @@
 package com.candyai
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.foundation.border
 import androidx.compose.ui.text.style.TextOverflow
@@ -225,7 +226,7 @@ fun ListCard(
 
 /** A pill that holds a few choices side by side (e.g. Preview | Code); the picked one is filled. Every choice is 44dp tall. */
 @Composable
-fun PillTabs(labels: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {
+fun PillTabs(labels: List<String>, selected: Int, modifier: Modifier = Modifier, onSelect: (Int) -> Unit) {
     val c = LocalCandy.current
     Row(
         modifier.padding(horizontal = 16.dp, vertical = 4.dp)

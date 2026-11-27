@@ -459,12 +459,12 @@ fun NoteReminderFlow(a: ReminderAsk, onFinished: () -> Unit) {
         else -> androidx.compose.material3.AlertDialog(
             onDismissRequest = onFinished,
             containerColor = androidx.compose.ui.graphics.Color.White,
-            title = { Text(stringResource(R.string.battery_title), color = ink) },
-            text = { Text(stringResource(R.string.battery_body), color = ink.copy(alpha = 0.75f)) },
+            title = { Text(stringResource(R.string.battery_title), color = NoteInk) },
+            text = { Text(stringResource(R.string.battery_body), color = NoteInk.copy(alpha = 0.75f)) },
             confirmButton = {
                 TextButton(onClick = { Reminders.askBatteryExemption(ctx); onFinished() }) { Text(stringResource(R.string.battery_allow), color = LocalCandy.current.userBubble, fontWeight = FontWeight.Bold) }
             },
-            dismissButton = { TextButton(onClick = onFinished) { Text(stringResource(R.string.battery_later), color = ink.copy(alpha = 0.7f)) } },
+            dismissButton = { TextButton(onClick = onFinished) { Text(stringResource(R.string.battery_later), color = NoteInk.copy(alpha = 0.7f)) } },
         )
     }
 }
