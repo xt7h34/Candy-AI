@@ -25,6 +25,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.foundation.layout.heightIn
@@ -154,28 +155,28 @@ fun SettingsScreen(
                 SettingsRows {
                     SettingRow(stringResource(R.string.settings_language), stringResource(R.string.settings_language_hint)) {
                         val current = Store.language
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            LangChip(stringResource(R.string.lang_ar), current == "ar", Modifier.weight(1f)) { if (current != "ar") Lang.change(ctx, "ar") }
-                            LangChip(stringResource(R.string.lang_en), current == "en", Modifier.weight(1f)) { if (current != "en") Lang.change(ctx, "en") }
+                        Segmented {
+                            LangChip(stringResource(R.string.lang_ar), current == "ar") { if (current != "ar") Lang.change(ctx, "ar") }
+                            LangChip(stringResource(R.string.lang_en), current == "en") { if (current != "en") Lang.change(ctx, "en") }
                         }
                     }
                     SettingDivider()
                     // theme: switches at once, no restart
                     SettingRow(stringResource(R.string.settings_theme), stringResource(R.string.settings_theme_hint)) {
                         val mode = ThemeMode.mode
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            ThemeChoice(Icons.Rounded.BrightnessAuto, stringResource(R.string.theme_system), mode == "system", Modifier.weight(1f)) { ThemeMode.set("system") }
-                            ThemeChoice(Icons.Rounded.LightMode, stringResource(R.string.theme_light), mode == "light", Modifier.weight(1f)) { ThemeMode.set("light") }
-                            ThemeChoice(Icons.Rounded.DarkMode, stringResource(R.string.theme_dark), mode == "dark", Modifier.weight(1f)) { ThemeMode.set("dark") }
+                        Segmented {
+                            ThemeChoice(Icons.Rounded.BrightnessAuto, stringResource(R.string.theme_system), mode == "system") { ThemeMode.set("system") }
+                            ThemeChoice(Icons.Rounded.LightMode, stringResource(R.string.theme_light), mode == "light") { ThemeMode.set("light") }
+                            ThemeChoice(Icons.Rounded.DarkMode, stringResource(R.string.theme_dark), mode == "dark") { ThemeMode.set("dark") }
                         }
                     }
                     SettingDivider()
                     // font: each choice is shown in its own font
                     SettingRow(stringResource(R.string.settings_font), stringResource(R.string.settings_font_hint)) {
                         val chosen = ThemeMode.font
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            FontChip("Amman", fontFamilyFor(ctx, "amman"), chosen != "cairo", true, Modifier.weight(1f)) { ThemeMode.chooseFont("amman") }
-                            FontChip("Cairo", fontFamilyFor(ctx, "cairo"), chosen == "cairo", cairoAvailable(ctx), Modifier.weight(1f)) { ThemeMode.chooseFont("cairo") }
+                        Segmented {
+                            FontChip("Amman", fontFamilyFor(ctx, "amman"), chosen != "cairo", true) { ThemeMode.chooseFont("amman") }
+                            FontChip("Cairo", fontFamilyFor(ctx, "cairo"), chosen == "cairo", cairoAvailable(ctx)) { ThemeMode.chooseFont("cairo") }
                         }
                     }
                 }
@@ -236,9 +237,9 @@ fun SettingsScreen(
                         expanded = ctsOn,
                     ) {
                     Text(stringResource(R.string.cts_keep_title), color = c.text, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 8.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        LangChip(stringResource(R.string.cts_keep_no), !ctsSave, Modifier.weight(1f)) { ctsSave = false; Store.ctsSave = false }
-                        LangChip(stringResource(R.string.cts_keep_yes), ctsSave, Modifier.weight(1f)) { ctsSave = true; Store.ctsSave = true }
+                    Segmented {
+                        LangChip(stringResource(R.string.cts_keep_no), !ctsSave) { ctsSave = false; Store.ctsSave = false }
+                        LangChip(stringResource(R.string.cts_keep_yes), ctsSave) { ctsSave = true; Store.ctsSave = true }
                     }
                     Text(stringResource(R.string.cts_keep_hint), color = c.subtext, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
                     Text(stringResource(R.string.cts_setup_hint), color = c.subtext, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
@@ -364,24 +365,59 @@ private fun SettingRow(
     }
 }
 
+/** One pill that holds a few choices side by side; the picked one is filled with the main colour. */
+@Composable
+private fun Segmented(content: @Composable RowScope.() -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        content = content,
+    )
+}
+
+/** One choice inside [Segmented]. [content] receives the text colour that fits the current state. */
+@Composable
+private fun RowScope.Segment(
+    selected: Boolean,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    content: @Composable (androidx.compose.ui.graphics.Color) -> Unit,
+) {
+    val c = LocalCandy.current
+    val fill by androidx.compose.animation.animateColorAsState(
+        if (selected) c.cta else androidx.compose.ui.graphics.Color.Transparent,
+        label = "segment",
+    )
+    Box(
+        Modifier.weight(1f)
+            .graphicsLayer { alpha = if (enabled) 1f else 0.4f }
+            .clip(RoundedCornerShape(50))
+            .background(fill)
+            .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.RadioButton, onClick = onClick)
+            .heightIn(min = CandyDims.tapLarge)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) { content(if (selected) c.onCta else c.subtext) }
+}
+
+@Composable
+private fun SegText(text: String, color: androidx.compose.ui.graphics.Color, selected: Boolean) {
+    Text(
+        text,
+        color = color,
+        style = if (selected) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium,
+        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+    )
+}
+
 /** A font choice that shows a sample written in that very font. */
 @Composable
-private fun FontChip(name: String, family: FontFamily, selected: Boolean, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    val c = LocalCandy.current
-    val shape = RoundedCornerShape(14.dp)
-    Column(
-        modifier
-            .graphicsLayer { alpha = if (enabled) 1f else 0.4f }
-            .clip(shape)
-            .background(if (selected) c.cta.copy(alpha = 0.18f) else c.bg)
-            .border(if (selected) 2.dp else 1.dp, if (selected) c.cta else c.border, shape)
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Text(stringResource(R.string.font_sample), color = c.text, style = MaterialTheme.typography.titleLarge.copy(fontFamily = family))
-        Text(name, color = if (selected) c.text else c.subtext, style = MaterialTheme.typography.labelMedium)
+private fun RowScope.FontChip(name: String, family: FontFamily, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+    Segment(selected, onClick, enabled) { fg ->
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(stringResource(R.string.font_sample), color = fg, style = MaterialTheme.typography.titleMedium.copy(fontFamily = family))
+            Text(name, color = fg, style = MaterialTheme.typography.labelMedium)
+        }
     }
 }
 
@@ -452,19 +488,8 @@ private fun SideOption(left: Boolean, selected: Boolean, label: String, onClick:
 }
 
 @Composable
-private fun LangChip(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    val c = LocalCandy.current
-    val shape = RoundedCornerShape(14.dp)
-    Box(
-        modifier.clip(shape)
-            .background(if (selected) c.cta.copy(alpha = 0.18f) else c.bg)
-            .border(if (selected) 2.dp else 1.dp, if (selected) c.cta else c.border, shape)
-            .clickable(onClick = onClick)
-            .padding(vertical = 14.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(label, color = if (selected) c.text else c.subtext, style = if (selected) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge)
-    }
+private fun RowScope.LangChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Segment(selected, onClick) { fg -> SegText(label, fg, selected) }
 }
 
 /** A tiny phone with the message box at the bottom: the round button on the left or on the right. */
@@ -510,11 +535,9 @@ private fun SendOption(left: Boolean, selected: Boolean, label: String, onClick:
     }
 }
 
-/** One theme button. When it is picked its icon spins and bounces, and the whole button pops, so the change feels playful. */
+/** One theme choice. When it is picked its icon spins and bounces, so the change feels playful. */
 @Composable
-private fun ThemeChoice(icon: ImageVector, label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    val c = LocalCandy.current
-    val shape = RoundedCornerShape(16.dp)
+private fun RowScope.ThemeChoice(icon: ImageVector, label: String, selected: Boolean, onClick: () -> Unit) {
     var taps by remember { mutableIntStateOf(0) }
     val spin = remember { Animatable(0f) }
     val bounce = remember { Animatable(1f) }
@@ -527,35 +550,19 @@ private fun ThemeChoice(icon: ImageVector, label: String, selected: Boolean, mod
         bounce.animateTo(1.5f, tween(140))
         bounce.animateTo(1f, spring(Spring.DampingRatioHighBouncy, Spring.StiffnessLow))
     }
-    val pop by animateFloatAsState(
-        if (selected) 1f else 0.94f,
-        spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessLow),
-        label = "pop",
-    )
-    Column(
-        modifier
-            .graphicsLayer { scaleX = pop; scaleY = pop }
-            .clip(shape)
-            .background(if (selected) c.cta.copy(alpha = 0.18f) else c.bg)
-            .border(if (selected) 2.dp else 1.dp, if (selected) c.cta else c.border, shape)
-            .clickable {
-                taps++
-                onClick()
-            }
-            .padding(vertical = 14.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        Icon(
-            icon,
-            null,
-            tint = if (selected) c.cta else c.subtext,
-            modifier = Modifier.size(28.dp).graphicsLayer {
-                rotationZ = spin.value
-                scaleX = bounce.value
-                scaleY = bounce.value
-            },
-        )
-        Text(label, color = if (selected) c.text else c.subtext, style = if (selected) MaterialTheme.typography.labelLarge else MaterialTheme.typography.bodyMedium)
+    Segment(selected, { taps++; onClick() }) { fg ->
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Icon(
+                icon,
+                null,
+                tint = fg,
+                modifier = Modifier.size(24.dp).graphicsLayer {
+                    rotationZ = spin.value
+                    scaleX = bounce.value
+                    scaleY = bounce.value
+                },
+            )
+            SegText(label, fg, selected)
+        }
     }
 }
