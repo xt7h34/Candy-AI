@@ -221,18 +221,12 @@ fun MemoryScreen(onBack: () -> Unit) {
 
     LaunchedEffect(Unit) { load() }
 
+    val c = LocalCandy.current
     Column(Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            AppIconButton(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back), onBack)
-            Text(
-                stringResource(R.string.ai_mem_title),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = cs.onBackground,
-                modifier = Modifier.weight(1f).padding(horizontal = 10.dp),
-            )
+        ScreenHeader(stringResource(R.string.ai_mem_title), onBack) {
+            // "clear all" deletes things, so it wears the error colour, not the colour of normal buttons
             if (items.isNotEmpty()) {
-                TextButton(onClick = { confirmAll = true }) { Text(stringResource(R.string.ai_mem_clear_all), color = cs.primary) }
+                TextButton(onClick = { confirmAll = true }) { Text(stringResource(R.string.ai_mem_clear_all), color = cs.error) }
             }
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(CandyBrand.hairline()))
@@ -243,31 +237,54 @@ fun MemoryScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             item(key = "switch") {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.ai_mem_on), style = MaterialTheme.typography.titleSmall, color = cs.onBackground, modifier = Modifier.weight(1f))
-                    Switch(checked = on, onCheckedChange = { toggle(it) })
+                val cardShape = RoundedCornerShape(CandyDims.cardRadius)
+                Surface(
+                    shape = cardShape,
+                    color = c.surface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, c.border),
+                    modifier = Modifier.fillMaxWidth().clip(cardShape).clickable(role = androidx.compose.ui.semantics.Role.Switch) { toggle(!on) },
+                ) {
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.ai_mem_on), style = MaterialTheme.typography.titleMedium, color = c.text, modifier = Modifier.weight(1f))
+                            Switch(checked = on, onCheckedChange = null)
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(stringResource(R.string.ai_mem_desc), style = MaterialTheme.typography.bodySmall, color = c.subtext)
+                    }
                 }
             }
-            item(key = "desc") { Muted(stringResource(R.string.ai_mem_desc)) }
             if (error.isNotBlank()) item(key = "error") { ErrorText(error) { error = ""; load() } }
             if (!loading && items.isEmpty()) {
                 item(key = "empty") {
-                    Text(
-                        stringResource(R.string.ai_mem_empty),
-                        color = cs.onSurfaceVariant,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
-                        textAlign = TextAlign.Center,
+                    EmptyState(
+                        icon = { Icon(Icons.Rounded.Psychology, null, tint = c.cta, modifier = Modifier.size(44.dp)) },
+                        message = stringResource(R.string.ai_mem_empty),
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             } else if (items.isNotEmpty()) {
-                item(key = "count") { Muted(stringResource(R.string.ai_mem_count, items.size, max)) }
+                item(key = "count") {
+                    Surface(shape = CircleShape, color = cs.surfaceContainerHigh) {
+                        Text(
+                            stringResource(R.string.ai_mem_count, items.size, max),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = c.subtext,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 3.dp),
+                        )
+                    }
+                }
             }
             items(items, key = { it.id }) { m ->
-                Surface(shape = MaterialTheme.shapes.medium, color = cs.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = cs.surfaceContainerHigh,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, cs.outlineVariant),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
                     Row(Modifier.padding(start = 14.dp, top = 2.dp, bottom = 2.dp, end = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(m.text, style = MaterialTheme.typography.bodyMedium, color = cs.onSurface, modifier = Modifier.weight(1f).padding(vertical = 8.dp))
-                        AppIconButton(Icons.Rounded.Delete, null, { remove(m.id) }, tint = cs.onSurfaceVariant)
+                        AppIconButton(Icons.Rounded.Delete, stringResource(R.string.delete), { remove(m.id) }, tint = c.subtext)
                     }
                 }
             }
@@ -278,7 +295,12 @@ fun MemoryScreen(onBack: () -> Unit) {
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Surface(shape = MaterialTheme.shapes.extraLarge, color = cs.surfaceContainerHigh, modifier = Modifier.weight(1f)) {
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                color = cs.surfaceContainerHigh,
+                border = androidx.compose.foundation.BorderStroke(1.dp, cs.outlineVariant),
+                modifier = Modifier.weight(1f),
+            ) {
                 Box(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                     if (draft.isEmpty()) Text(stringResource(R.string.ai_mem_add_hint), color = cs.onSurfaceVariant)
                     BasicTextField(
@@ -294,11 +316,11 @@ fun MemoryScreen(onBack: () -> Unit) {
             val canAdd = draft.isNotBlank()
             Surface(
                 shape = CircleShape,
-                color = if (canAdd) cs.primary else cs.surfaceContainerHigh,
-                modifier = Modifier.size(48.dp).clip(CircleShape).clickable(enabled = canAdd) { add() },
+                color = if (canAdd) c.cta else cs.surfaceContainerHigh,
+                modifier = Modifier.size(52.dp).clip(CircleShape).clickable(enabled = canAdd) { add() },
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.Add, contentDescription = null, tint = if (canAdd) cs.onPrimary else cs.onSurfaceVariant)
+                    Icon(Icons.Rounded.Add, contentDescription = stringResource(R.string.ai_mem_add_hint), tint = if (canAdd) c.onCta else c.subtext)
                 }
             }
         }
@@ -309,7 +331,7 @@ fun MemoryScreen(onBack: () -> Unit) {
             onDismissRequest = { confirmAll = false },
             containerColor = cs.surfaceContainerHigh,
             text = { Text(stringResource(R.string.ai_mem_clear_q), color = cs.onSurface) },
-            confirmButton = { TextButton(onClick = { confirmAll = false; removeAll() }) { Text(stringResource(R.string.ai_delete), color = cs.primary) } },
+            confirmButton = { TextButton(onClick = { confirmAll = false; removeAll() }) { Text(stringResource(R.string.ai_delete), color = cs.error) } },
             dismissButton = { TextButton(onClick = { confirmAll = false }) { Text(stringResource(R.string.cancel), color = cs.onSurfaceVariant) } },
         )
     }

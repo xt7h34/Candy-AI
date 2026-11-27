@@ -1,5 +1,7 @@
 package com.candyai
 
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -99,24 +101,15 @@ fun ProjectsScreen(onBack: () -> Unit, onOpenChat: (String) -> Unit, onNewChat: 
     BackHandler { if (openId != null) openId = null else onBack() }
 
     Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { if (openId != null) openId = null else onBack() }) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = c.text)
-            }
+        ScreenHeader(
+            title = open?.name ?: stringResource(R.string.projects),
+            onBack = { if (openId != null) openId = null else onBack() },
+            dot = open?.let { projectColor(it.color) },
+        ) {
             if (open != null) {
-                Box(Modifier.size(12.dp).clip(CircleShape).background(projectColor(open.color)))
-                Spacer(Modifier.width(8.dp))
-            }
-            Text(
-                open?.name ?: stringResource(R.string.projects),
-                color = c.text, fontSize = 20.sp, fontWeight = FontWeight.Bold,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-                style = TextStyle(textDirection = TextDirection.Content),
-            )
-            if (open != null) {
-                IconButton(onClick = { editing = open }) { Icon(Icons.Rounded.Edit, stringResource(R.string.project_edit), tint = c.subtext) }
+                AppIconButton(Icons.Rounded.Edit, stringResource(R.string.project_edit), { editing = open }, tint = c.subtext)
             } else {
-                IconButton(onClick = { creating = true }) { Icon(Icons.Rounded.Add, stringResource(R.string.project_new), tint = c.accent) }
+                AddAction(stringResource(R.string.project_new)) { creating = true }
             }
         }
 
@@ -130,18 +123,24 @@ fun ProjectsScreen(onBack: () -> Unit, onOpenChat: (String) -> Unit, onNewChat: 
             open != null -> {
                 val mine = convs.filter { it.projectId == open.id }
                 Column(Modifier.fillMaxSize()) {
+                    val instrShape = RoundedCornerShape(14.dp)
                     Surface(
-                        shape = RoundedCornerShape(14.dp), color = c.surface, border = BorderStroke(1.dp, c.border),
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clickable { editing = open },
+                        shape = instrShape, color = c.surface, border = BorderStroke(1.dp, c.border),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(instrShape).clickable { editing = open },
                     ) {
-                        Column(Modifier.padding(14.dp)) {
-                            Text(stringResource(R.string.project_instr_label), color = c.subtext, fontSize = 12.sp)
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                open.instructions.ifBlank { stringResource(R.string.project_no_instr) },
-                                color = if (open.instructions.isBlank()) c.subtext else c.text, fontSize = 14.sp, maxLines = 4, overflow = TextOverflow.Ellipsis,
-                                style = TextStyle(textDirection = TextDirection.Content),
-                            )
+                        Row(Modifier.height(IntrinsicSize.Min)) {
+                            // the project's own colour shows here, not on the button, so the button always stays readable
+                            Box(Modifier.width(4.dp).fillMaxHeight().background(projectColor(open.color)))
+                            Column(Modifier.padding(14.dp)) {
+                                Text(stringResource(R.string.project_instr_label), color = c.subtext, style = MaterialTheme.typography.bodySmall)
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    open.instructions.ifBlank { stringResource(R.string.project_no_instr) },
+                                    color = if (open.instructions.isBlank()) c.subtext else c.text,
+                                    style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content),
+                                    maxLines = 4, overflow = TextOverflow.Ellipsis,
+                                )
+                            }
                         }
                     }
                     Spacer(Modifier.height(10.dp))
@@ -167,32 +166,31 @@ fun ProjectsScreen(onBack: () -> Unit, onOpenChat: (String) -> Unit, onNewChat: 
                     }
                     Button(
                         onClick = { onNewChat(open.id) },
-                        modifier = Modifier.fillMaxWidth().padding(16.dp).height(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = projectColor(open.color), contentColor = Color.White),
+                        modifier = Modifier.fillMaxWidth().padding(16.dp).height(56.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = c.cta, contentColor = c.onCta),
                     ) {
                         Icon(Icons.Rounded.Add, null)
                         Spacer(Modifier.width(6.dp))
-                        Text(stringResource(R.string.project_new_chat), fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.project_new_chat))
                     }
                 }
             }
-            list.isEmpty() -> Text(stringResource(R.string.project_empty), color = c.subtext, fontSize = 14.sp, modifier = Modifier.fillMaxWidth().padding(32.dp))
+            list.isEmpty() -> EmptyState(
+                icon = { Image(painterResource(R.drawable.ic_projects), null, Modifier.size(64.dp)) },
+                message = stringResource(R.string.project_empty),
+                actionLabel = stringResource(R.string.project_new),
+                onAction = { creating = true },
+                modifier = Modifier.fillMaxSize(),
+            )
             else -> LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(list, key = { it.id }) { pr ->
-                    Surface(
-                        shape = RoundedCornerShape(18.dp), color = c.surface, border = BorderStroke(1.dp, c.border),
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { openId = pr.id },
-                    ) {
-                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Image(painterResource(R.drawable.ic_projects), null, Modifier.size(46.dp))
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(pr.name, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, style = TextStyle(textDirection = TextDirection.Content))
-                                Text(stringResource(R.string.project_chats, pr.count), color = c.subtext, fontSize = 12.sp)
-                            }
-                            Box(Modifier.size(14.dp).clip(CircleShape).background(projectColor(pr.color)))
-                        }
-                    }
+                    ListCard(
+                        title = pr.name,
+                        subtitle = stringResource(R.string.project_chats, pr.count),
+                        onClick = { openId = pr.id },
+                        icon = { Image(painterResource(R.drawable.ic_projects), null, Modifier.size(46.dp)) },
+                        trailing = { Box(Modifier.size(14.dp).clip(CircleShape).background(projectColor(pr.color))) },
+                    )
                 }
             }
         }
