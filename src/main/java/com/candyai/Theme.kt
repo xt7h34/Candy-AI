@@ -134,6 +134,10 @@ private fun cairoFamily(ctx: Context): FontFamily? {
 
 fun cairoAvailable(ctx: Context): Boolean = cairoFamily(ctx) != null
 
+/** The family for a saved choice ("amman" or "cairo"); Amman when Cairo is not there. */
+internal fun fontFamilyFor(ctx: Context, choice: String): FontFamily =
+    if (choice == "cairo") cairoFamily(ctx) ?: AmmanFamily else AmmanFamily
+
 /** Sizes shared by every screen, so touch targets and spacing stop being decided one screen at a time. */
 object CandyDims {
     /** Smallest touch target for any icon button (Android's own minimum is 48dp; 44dp is the smallest we allow inside dense rows). */
@@ -231,7 +235,7 @@ fun CandyTheme(dark: Boolean = rememberDark(), content: @Composable () -> Unit) 
     val candy = (if (dark) DarkCandy else LightCandy).glide()
     val scheme = (if (dark) DarkScheme else LightScheme).glide()
     val ctx = LocalContext.current
-    val family = remember(ThemeMode.font) { if (ThemeMode.font == "cairo") cairoFamily(ctx) ?: AmmanFamily else AmmanFamily }
+    val family = remember(ThemeMode.font) { fontFamilyFor(ctx, ThemeMode.font) }
     val typography = remember(family) { candyTypography(family) }
     CompositionLocalProvider(LocalCandy provides candy) {
         MaterialTheme(

@@ -25,6 +25,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -138,63 +142,68 @@ fun SettingsScreen(
     Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             AppIconButton(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back), onClose, tint = c.text)
-            Text(stringResource(R.string.settings), color = c.text, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 6.dp))
+            Text(stringResource(R.string.settings), color = c.text, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(start = 6.dp))
         }
 
         Column(
-            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = CandyDims.screenPad, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(22.dp),
         ) {
-            // memory
-            SettingsCard(Modifier.clickable { onOpenMemory() }) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Psychology, null, tint = c.accent, modifier = Modifier.size(28.dp))
-                    Column(Modifier.weight(1f).padding(start = 14.dp)) {
-                        Text(stringResource(R.string.ai_mem_title), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                        Text(stringResource(R.string.settings_memory_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+            // ---- look: language, theme, font ----
+            SettingsSection(stringResource(R.string.settings_group_look)) {
+                SettingsRows {
+                    SettingRow(stringResource(R.string.settings_language), stringResource(R.string.settings_language_hint)) {
+                        val current = Store.language
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            LangChip(stringResource(R.string.lang_ar), current == "ar", Modifier.weight(1f)) { if (current != "ar") Lang.change(ctx, "ar") }
+                            LangChip(stringResource(R.string.lang_en), current == "en", Modifier.weight(1f)) { if (current != "en") Lang.change(ctx, "en") }
+                        }
+                    }
+                    SettingDivider()
+                    // theme: switches at once, no restart
+                    SettingRow(stringResource(R.string.settings_theme), stringResource(R.string.settings_theme_hint)) {
+                        val mode = ThemeMode.mode
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            ThemeChoice(Icons.Rounded.BrightnessAuto, stringResource(R.string.theme_system), mode == "system", Modifier.weight(1f)) { ThemeMode.set("system") }
+                            ThemeChoice(Icons.Rounded.LightMode, stringResource(R.string.theme_light), mode == "light", Modifier.weight(1f)) { ThemeMode.set("light") }
+                            ThemeChoice(Icons.Rounded.DarkMode, stringResource(R.string.theme_dark), mode == "dark", Modifier.weight(1f)) { ThemeMode.set("dark") }
+                        }
+                    }
+                    SettingDivider()
+                    // font: each choice is shown in its own font
+                    SettingRow(stringResource(R.string.settings_font), stringResource(R.string.settings_font_hint)) {
+                        val chosen = ThemeMode.font
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            FontChip("Amman", fontFamilyFor(ctx, "amman"), chosen != "cairo", true, Modifier.weight(1f)) { ThemeMode.chooseFont("amman") }
+                            FontChip("Cairo", fontFamilyFor(ctx, "cairo"), chosen == "cairo", cairoAvailable(ctx), Modifier.weight(1f)) { ThemeMode.chooseFont("cairo") }
+                        }
                     }
                 }
             }
 
-            // language
-            SettingsCard {
-                val current = Store.language
-                Text(stringResource(R.string.settings_language), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                Text(stringResource(R.string.settings_language_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    LangChip(stringResource(R.string.lang_ar), current == "ar", Modifier.weight(1f)) { if (current != "ar") Lang.change(ctx, "ar") }
-                    LangChip(stringResource(R.string.lang_en), current == "en", Modifier.weight(1f)) { if (current != "en") Lang.change(ctx, "en") }
-                }
-            }
-
-            // theme: switches at once, no restart
-            SettingsCard {
-                val mode = ThemeMode.mode
-                Text(stringResource(R.string.settings_theme), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                Text(stringResource(R.string.settings_theme_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ThemeChoice(Icons.Rounded.BrightnessAuto, stringResource(R.string.theme_system), mode == "system", Modifier.weight(1f)) { ThemeMode.set("system") }
-                    ThemeChoice(Icons.Rounded.LightMode, stringResource(R.string.theme_light), mode == "light", Modifier.weight(1f)) { ThemeMode.set("light") }
-                    ThemeChoice(Icons.Rounded.DarkMode, stringResource(R.string.theme_dark), mode == "dark", Modifier.weight(1f)) { ThemeMode.set("dark") }
-                }
-            }
-
-            // Candy over the other apps
-            SettingsCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(R.string.overlay_title), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                        Text(stringResource(R.string.overlay_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
-                    }
-                    Switch(checked = overlayOn, onCheckedChange = { setOverlay(it) }, modifier = Modifier.padding(start = 8.dp))
-                }
-            }
-
-            // what floating Candy looks like while she is tucked away
-            if (overlayOn) SettingsCard {
+            // ---- Candy: memory, floating Candy, Circle to Search, agent, wake word ----
+            SettingsSection(stringResource(R.string.settings_group_candy)) {
+                SettingsRows {
+                    SettingRow(
+                        stringResource(R.string.ai_mem_title),
+                        stringResource(R.string.settings_memory_hint),
+                        onClick = onOpenMemory,
+                        leading = { Icon(Icons.Rounded.Psychology, null, tint = c.cta, modifier = Modifier.size(28.dp)) },
+                        trailing = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.subtext) },
+                    )
+                    SettingDivider()
+                    // Candy over the other apps (the whole row is the switch)
+                    SettingRow(
+                        stringResource(R.string.overlay_title),
+                        stringResource(R.string.overlay_hint),
+                        onClick = { setOverlay(!overlayOn) },
+                        trailing = { Switch(checked = overlayOn, onCheckedChange = null) },
+                    )
+                    if (overlayOn) {
+                        SettingDivider()
+                        // what floating Candy looks like while she is tucked away
+                        SettingRow(stringResource(R.string.skin_title), stringResource(R.string.skin_hint)) {
                 var skin by remember { mutableStateOf(TabSkin.of(Store.tabSkin)) }
-                Text(stringResource(R.string.skin_title), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                Text(stringResource(R.string.skin_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     for (k in TabSkin.values()) {
                         val on = skin == k
@@ -204,36 +213,35 @@ fun SettingsScreen(
                         ) {
                             Box(
                                 Modifier.size(56.dp).clip(RoundedCornerShape(14.dp)).background(c.bg)
-                                    .border(if (on) 2.5.dp else 1.dp, if (on) c.accent else c.border, RoundedCornerShape(14.dp)),
+                                    .border(if (on) 2.5.dp else 1.dp, if (on) c.cta else c.border, RoundedCornerShape(14.dp)),
                                 contentAlignment = Alignment.Center,
                             ) { SkinArt(k, 40.dp) }
                             Text(
                                 stringResource(when (k) { TabSkin.Rect -> R.string.skin_rect; TabSkin.Donut -> R.string.skin_donut; TabSkin.Crown -> R.string.skin_crown; TabSkin.Bear -> R.string.skin_bear; else -> R.string.skin_faces }),
-                                color = if (on) c.text else c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp),
+                                color = if (on) c.text else c.subtext, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 4.dp),
                             )
                         }
                     }
                 }
-                if (skin == TabSkin.Faces) Text(stringResource(R.string.skin_faces_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
-            }
-
-            // Circle to Search
-            SettingsCard {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(stringResource(R.string.cts_title), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                        Text(stringResource(R.string.cts_settings_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+                if (skin == TabSkin.Faces) Text(stringResource(R.string.skin_faces_hint), color = c.subtext, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 10.dp))
+                        }
                     }
-                    Switch(checked = ctsOn, onCheckedChange = { ctsOn = it; Store.ctsOn = it }, modifier = Modifier.padding(start = 8.dp))
-                }
-                if (ctsOn) {
-                    Text(stringResource(R.string.cts_keep_title), color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp))
+                    SettingDivider()
+                    // Circle to Search
+                    SettingRow(
+                        stringResource(R.string.cts_title),
+                        stringResource(R.string.cts_settings_hint),
+                        onClick = { ctsOn = !ctsOn; Store.ctsOn = ctsOn },
+                        trailing = { Switch(checked = ctsOn, onCheckedChange = null) },
+                        expanded = ctsOn,
+                    ) {
+                    Text(stringResource(R.string.cts_keep_title), color = c.text, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 8.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         LangChip(stringResource(R.string.cts_keep_no), !ctsSave, Modifier.weight(1f)) { ctsSave = false; Store.ctsSave = false }
                         LangChip(stringResource(R.string.cts_keep_yes), ctsSave, Modifier.weight(1f)) { ctsSave = true; Store.ctsSave = true }
                     }
-                    Text(stringResource(R.string.cts_keep_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
-                    Text(stringResource(R.string.cts_setup_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                    Text(stringResource(R.string.cts_keep_hint), color = c.subtext, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
+                    Text(stringResource(R.string.cts_setup_hint), color = c.subtext, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 8.dp))
                     Column(Modifier.fillMaxWidth().padding(top = 4.dp)) {
                         TextButton(onClick = { openAssistantSettings() }) { Text(stringResource(R.string.cts_set_assistant), color = c.userBubble) }
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -245,34 +253,32 @@ fun SettingsScreen(
                             }
                         }
                     }
+                    }
                 }
+                // Candy the agent: screen control, assistant status
+                AgentSettingsCard()
+                // wake word
+                WakeSettingsCard()
             }
 
-            // drawer side, with a small picture of each choice
-            SettingsCard {
-                Text(stringResource(R.string.settings_drawer_side), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                Text(stringResource(R.string.settings_drawer_side_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    SideOption(left = false, selected = side != "left", label = stringResource(R.string.side_right)) { onSide("right") }
-                    SideOption(left = true, selected = side == "left", label = stringResource(R.string.side_left)) { onSide("left") }
+            // ---- layout: which side things are on, each with a small picture ----
+            SettingsSection(stringResource(R.string.settings_group_layout)) {
+                SettingsRows {
+                    SettingRow(stringResource(R.string.settings_drawer_side), stringResource(R.string.settings_drawer_side_hint)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            SideOption(left = false, selected = side != "left", label = stringResource(R.string.side_right)) { onSide("right") }
+                            SideOption(left = true, selected = side == "left", label = stringResource(R.string.side_left)) { onSide("left") }
+                        }
+                    }
+                    SettingDivider()
+                    SettingRow(stringResource(R.string.settings_send_side), stringResource(R.string.settings_send_side_hint)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            SendOption(left = false, selected = sendSide != "left", label = stringResource(R.string.side_right)) { onSendSide("right") }
+                            SendOption(left = true, selected = sendSide == "left", label = stringResource(R.string.side_left)) { onSendSide("left") }
+                        }
+                    }
                 }
             }
-
-            // which side the send / voice button is on
-            SettingsCard {
-                Text(stringResource(R.string.settings_send_side), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                Text(stringResource(R.string.settings_send_side_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    SendOption(left = false, selected = sendSide != "left", label = stringResource(R.string.side_right)) { onSendSide("right") }
-                    SendOption(left = true, selected = sendSide == "left", label = stringResource(R.string.side_left)) { onSendSide("left") }
-                }
-            }
-
-            // Candy the agent: screen control, assistant status
-            AgentSettingsCard()
-
-            // wake word
-            WakeSettingsCard()
 
             // app updates
             UpdateSection()
@@ -284,6 +290,100 @@ fun SettingsScreen(
 
 @Composable
 internal fun SettingsCardPublic(content: @Composable ColumnScope.() -> Unit) = SettingsCard(content = content)
+
+/** A small label, then what belongs under it. */
+@Composable
+private fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column {
+        Text(
+            title,
+            color = LocalCandy.current.subtext,
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(horizontal = 6.dp).padding(bottom = 8.dp),
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+    }
+}
+
+/** One rounded card whose rows are separated by hairlines. */
+@Composable
+private fun SettingsRows(content: @Composable ColumnScope.() -> Unit) {
+    val c = LocalCandy.current
+    Surface(
+        shape = RoundedCornerShape(CandyDims.cardRadius),
+        color = c.surface,
+        border = BorderStroke(1.dp, c.border),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(content = content)
+    }
+}
+
+@Composable
+private fun SettingDivider() {
+    androidx.compose.material3.HorizontalDivider(color = LocalCandy.current.border)
+}
+
+/**
+ * Every setting is one of these: a title and a hint, an optional icon before them and control after them,
+ * and (optionally) a wider control underneath. With [onClick] the whole row is the target.
+ */
+@Composable
+private fun SettingRow(
+    title: String,
+    hint: String? = null,
+    onClick: (() -> Unit)? = null,
+    leading: (@Composable () -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = null,
+    expanded: Boolean = true,
+    below: (@Composable ColumnScope.() -> Unit)? = null,
+) {
+    val c = LocalCandy.current
+    Column(
+        Modifier.fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick) else Modifier)
+            .heightIn(min = CandyDims.rowMin)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (leading != null) {
+                leading()
+                Spacer(Modifier.width(14.dp))
+            }
+            Column(Modifier.weight(1f)) {
+                Text(title, color = c.text, style = MaterialTheme.typography.titleMedium)
+                if (hint != null) Text(hint, color = c.subtext, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 2.dp))
+            }
+            if (trailing != null) {
+                Spacer(Modifier.width(8.dp))
+                trailing()
+            }
+        }
+        if (below != null && expanded) Column(Modifier.fillMaxWidth().padding(top = 12.dp), content = below)
+    }
+}
+
+/** A font choice that shows a sample written in that very font. */
+@Composable
+private fun FontChip(name: String, family: FontFamily, selected: Boolean, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val c = LocalCandy.current
+    val shape = RoundedCornerShape(14.dp)
+    Column(
+        modifier
+            .graphicsLayer { alpha = if (enabled) 1f else 0.4f }
+            .clip(shape)
+            .background(if (selected) c.cta.copy(alpha = 0.18f) else c.bg)
+            .border(if (selected) 2.dp else 1.dp, if (selected) c.cta else c.border, shape)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(stringResource(R.string.font_sample), color = c.text, style = MaterialTheme.typography.titleLarge.copy(fontFamily = family))
+        Text(name, color = if (selected) c.text else c.subtext, style = MaterialTheme.typography.labelMedium)
+    }
+}
 
 @Composable
 private fun SettingsCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
@@ -313,13 +413,13 @@ private fun SideOption(left: Boolean, selected: Boolean, label: String, onClick:
                 Modifier.size(width = 96.dp, height = 150.dp)
                     .clip(frame)
                     .background(c.bg)
-                    .border(if (selected) 2.5.dp else 1.dp, if (selected) c.accent else c.border, frame),
+                    .border(if (selected) 2.5.dp else 1.dp, if (selected) c.cta else c.border, frame),
             ) {
                 // the drawer
                 Column(
                     Modifier.align(if (left) Alignment.CenterStart else Alignment.CenterEnd)
                         .fillMaxHeight().width(48.dp)
-                        .background(c.accent.copy(alpha = 0.2f))
+                        .background(c.cta.copy(alpha = 0.2f))
                         .padding(8.dp),
                     verticalArrangement = Arrangement.spacedBy(7.dp),
                 ) {
@@ -327,7 +427,7 @@ private fun SideOption(left: Boolean, selected: Boolean, label: String, onClick:
                         Box(
                             Modifier.fillMaxWidth(if (i == 0) 1f else 0.75f).height(8.dp)
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(if (i == 0) c.accent.copy(alpha = 0.7f) else c.subtext.copy(alpha = 0.4f)),
+                                .background(if (i == 0) c.cta.copy(alpha = 0.7f) else c.subtext.copy(alpha = 0.4f)),
                         )
                     }
                 }
@@ -343,10 +443,10 @@ private fun SideOption(left: Boolean, selected: Boolean, label: String, onClick:
         }
         Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (selected) {
-                Icon(Icons.Rounded.CheckCircle, null, tint = c.accent, modifier = Modifier.size(16.dp))
+                Icon(Icons.Rounded.CheckCircle, null, tint = c.cta, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
             }
-            Text(label, color = if (selected) c.text else c.subtext, fontSize = 13.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+            Text(label, color = if (selected) c.text else c.subtext, style = if (selected) MaterialTheme.typography.labelLarge else MaterialTheme.typography.bodyMedium)
         }
     }
 }
@@ -357,13 +457,13 @@ private fun LangChip(label: String, selected: Boolean, modifier: Modifier, onCli
     val shape = RoundedCornerShape(14.dp)
     Box(
         modifier.clip(shape)
-            .background(if (selected) c.accent.copy(alpha = 0.18f) else c.bg)
-            .border(if (selected) 2.dp else 1.dp, if (selected) c.accent else c.border, shape)
+            .background(if (selected) c.cta.copy(alpha = 0.18f) else c.bg)
+            .border(if (selected) 2.dp else 1.dp, if (selected) c.cta else c.border, shape)
             .clickable(onClick = onClick)
             .padding(vertical = 14.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, color = if (selected) c.text else c.subtext, fontSize = 15.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+        Text(label, color = if (selected) c.text else c.subtext, style = if (selected) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge)
     }
 }
 
@@ -381,7 +481,7 @@ private fun SendOption(left: Boolean, selected: Boolean, label: String, onClick:
                 Modifier.size(width = 96.dp, height = 150.dp)
                     .clip(frame)
                     .background(c.bg)
-                    .border(if (selected) 2.5.dp else 1.dp, if (selected) c.accent else c.border, frame),
+                    .border(if (selected) 2.5.dp else 1.dp, if (selected) c.cta else c.border, frame),
             ) {
                 Column(Modifier.align(Alignment.TopStart).fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Box(Modifier.fillMaxWidth(0.65f).height(14.dp).clip(RoundedCornerShape(7.dp)).background(c.subtext.copy(alpha = 0.25f)))
@@ -393,7 +493,7 @@ private fun SendOption(left: Boolean, selected: Boolean, label: String, onClick:
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    val circle: @Composable () -> Unit = { Box(Modifier.size(22.dp).clip(RoundedCornerShape(11.dp)).background(c.accent)) }
+                    val circle: @Composable () -> Unit = { Box(Modifier.size(22.dp).clip(RoundedCornerShape(11.dp)).background(c.cta)) }
                     if (left) circle()
                     Box(Modifier.weight(1f).height(22.dp).clip(RoundedCornerShape(11.dp)).background(c.surface).border(1.dp, c.border, RoundedCornerShape(11.dp)))
                     if (!left) circle()
@@ -402,10 +502,10 @@ private fun SendOption(left: Boolean, selected: Boolean, label: String, onClick:
         }
         Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (selected) {
-                Icon(Icons.Rounded.CheckCircle, null, tint = c.accent, modifier = Modifier.size(16.dp))
+                Icon(Icons.Rounded.CheckCircle, null, tint = c.cta, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
             }
-            Text(label, color = if (selected) c.text else c.subtext, fontSize = 13.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+            Text(label, color = if (selected) c.text else c.subtext, style = if (selected) MaterialTheme.typography.labelLarge else MaterialTheme.typography.bodyMedium)
         }
     }
 }
@@ -436,8 +536,8 @@ private fun ThemeChoice(icon: ImageVector, label: String, selected: Boolean, mod
         modifier
             .graphicsLayer { scaleX = pop; scaleY = pop }
             .clip(shape)
-            .background(if (selected) c.accent.copy(alpha = 0.18f) else c.bg)
-            .border(if (selected) 2.dp else 1.dp, if (selected) c.accent else c.border, shape)
+            .background(if (selected) c.cta.copy(alpha = 0.18f) else c.bg)
+            .border(if (selected) 2.dp else 1.dp, if (selected) c.cta else c.border, shape)
             .clickable {
                 taps++
                 onClick()
@@ -449,13 +549,13 @@ private fun ThemeChoice(icon: ImageVector, label: String, selected: Boolean, mod
         Icon(
             icon,
             null,
-            tint = if (selected) c.accent else c.subtext,
+            tint = if (selected) c.cta else c.subtext,
             modifier = Modifier.size(28.dp).graphicsLayer {
                 rotationZ = spin.value
                 scaleX = bounce.value
                 scaleY = bounce.value
             },
         )
-        Text(label, color = if (selected) c.text else c.subtext, fontSize = 13.sp, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal)
+        Text(label, color = if (selected) c.text else c.subtext, style = if (selected) MaterialTheme.typography.labelLarge else MaterialTheme.typography.bodyMedium)
     }
 }

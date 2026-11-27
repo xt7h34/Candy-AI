@@ -63,4 +63,10 @@
     <string name="ai_status_search">كاندي · بتبحث…</string>
     <string name="ai_status_done">كاندي · خلّصت</string>
     <string name="ai_status_sorry">كاندي · حصلت مشكلة</string>
+    <string name="settings_group_look">المظهر</string>
+    <string name="settings_group_candy">كاندي</string>
+    <string name="settings_group_layout">التخطيط</string>
+    <string name="settings_font">الخط</string>
+    <string name="settings_font_hint">بيتغير فورًا في التطبيق كله</string>
+    <string name="font_sample">كاندي Aa</string>
 </resources>

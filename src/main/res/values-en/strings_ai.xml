@@ -63,4 +63,10 @@
     <string name="ai_status_search">Candy · searching…</string>
     <string name="ai_status_done">Candy · done</string>
     <string name="ai_status_sorry">Candy · something went wrong</string>
+    <string name="settings_group_look">Appearance</string>
+    <string name="settings_group_candy">Candy</string>
+    <string name="settings_group_layout">Layout</string>
+    <string name="settings_font">Font</string>
+    <string name="settings_font_hint">Changes instantly across the app</string>
+    <string name="font_sample">Candy Aa</string>
 </resources>
