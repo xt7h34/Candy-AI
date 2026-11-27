@@ -21,7 +21,9 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -140,20 +142,40 @@ internal fun sameDay(a: Long, b: Long): Boolean {
 @Composable
 internal fun AiTypingBubble(label: String) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start, verticalAlignment = Alignment.Bottom) {
-        AiAvatar(28.dp)
-        Spacer(Modifier.size(6.dp))
+        AiAvatar(32.dp)
+        Spacer(Modifier.size(8.dp))
         Surface(
             shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 20.dp, bottomStart = 6.dp),
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
             Row(
                 Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("• • •", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TypingDots()
                 Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+    }
+}
+
+/** Three dots that fade in turn while Candy writes. Still (not animated) when the phone has animations switched off. */
+@Composable
+private fun TypingDots() {
+    val dot = LocalCandy.current.cta
+    val animate = remember { android.animation.ValueAnimator.areAnimatorsEnabled() }
+    val t = rememberInfiniteTransition(label = "typing")
+    Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
+        for (i in 0..2) {
+            val a by t.animateFloat(
+                initialValue = 0.25f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(600, delayMillis = i * 200), RepeatMode.Reverse),
+                label = "dot$i",
+            )
+            Box(Modifier.size(7.dp).clip(CircleShape).graphicsLayer { alpha = if (animate) a else 0.7f }.background(dot))
         }
     }
 }
@@ -163,40 +185,48 @@ internal fun AiBubble(m: AiMsg) {
     val big = 20.dp
     val small = 6.dp
     val cs = MaterialTheme.colorScheme
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = if (m.mine) Arrangement.End else Arrangement.Start,
-        verticalAlignment = Alignment.Bottom,
-    ) {
-        if (!m.mine) {
-            AiAvatar(28.dp)
-            Spacer(Modifier.size(6.dp))
-        }
-        if (m.mine) {
-            Box(
-                Modifier
-                    .widthIn(max = 300.dp)
-                    .clip(RoundedCornerShape(topStart = big, topEnd = big, bottomEnd = small, bottomStart = big))
-                    .background(Brush.linearGradient(listOf(cs.primary, lerp(cs.primary, cs.tertiary, 0.5f))))
-                    .padding(horizontal = 14.dp, vertical = 9.dp),
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp), horizontalAlignment = Alignment.End) {
-                    for (a in m.atts) AttachView(a)
-                    if (m.text.isNotBlank()) Text(m.text, color = cs.onPrimary, style = MaterialTheme.typography.bodyLarge)
-                }
+    val candy = LocalCandy.current
+    val mineShape = RoundedCornerShape(topStart = big, topEnd = big, bottomEnd = small, bottomStart = big)
+    val aiShape = RoundedCornerShape(topStart = big, topEnd = big, bottomEnd = big, bottomStart = small)
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        // a bubble takes at most 82% of the width, so it also fits small phones and tablets (it was a fixed 300dp)
+        val cap = maxWidth * CandyDims.bubbleFraction
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = if (m.mine) Arrangement.End else Arrangement.Start,
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            if (!m.mine) {
+                AiAvatar(32.dp)
+                Spacer(Modifier.size(8.dp))
             }
-        } else {
-            Box(
-                Modifier
-                    .widthIn(max = 300.dp)
-                    .clip(RoundedCornerShape(topStart = big, topEnd = big, bottomEnd = big, bottomStart = small))
-                    .background(cs.surfaceContainerHigh)
-                    .padding(horizontal = 14.dp, vertical = 9.dp),
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (a in m.atts) AttachView(a, large = true)
-                    if (m.text.isNotBlank()) SelectionContainer {
-                        AiMarkdown(m.text)
+            if (m.mine) {
+                Box(
+                    Modifier
+                        .widthIn(max = cap)
+                        .clip(mineShape)
+                        .background(candy.userBubble)
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp), horizontalAlignment = Alignment.End) {
+                        for (a in m.atts) AttachView(a)
+                        if (m.text.isNotBlank()) Text(m.text, color = candy.onUserBubble, style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            } else {
+                Box(
+                    Modifier
+                        .widthIn(max = cap)
+                        .clip(aiShape)
+                        .background(cs.surfaceContainerHigh)
+                        .border(1.dp, cs.outlineVariant, aiShape)
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        for (a in m.atts) AttachView(a, large = true)
+                        if (m.text.isNotBlank()) SelectionContainer {
+                            AiMarkdown(m.text)
+                        }
                     }
                 }
             }
@@ -234,7 +264,7 @@ internal fun copyAiText(ctx: Context, text: String) {
 @Composable
 internal fun AiActionIcon(painter: Painter, description: Int, active: Boolean, flip: Boolean = false, size: Dp = 17.dp, onClick: () -> Unit) {
     Box(
-        Modifier.size(34.dp).clip(CircleShape).clickable(onClick = onClick),
+        Modifier.size(CandyDims.tap).clip(CircleShape).clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -246,7 +276,7 @@ internal fun AiActionIcon(painter: Painter, description: Int, active: Boolean, f
     }
 }
 
-/** Under each of Candy's replies: listen (Pro and Elite), copy, like, dislike, share, and on the last one, answer again. */
+/** Under each of Candy's replies: listen (Pro and Elite), copy, like, share, and "more" (dislike, and answer again on the last one). */
 @Composable
 internal fun AiActionRow(
     voice: Boolean,
@@ -260,10 +290,10 @@ internal fun AiActionRow(
     onShare: () -> Unit,
     onResend: (() -> Unit)?,
 ) {
+    var more by remember { mutableStateOf(false) }
     Row(
-        Modifier.fillMaxWidth().padding(start = 34.dp),
+        Modifier.fillMaxWidth().padding(start = 40.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         if (voice) {
             if (playing) {
@@ -274,16 +304,32 @@ internal fun AiActionRow(
         }
         AiActionIcon(painterResource(R.drawable.ic_copy), R.string.ai_act_copy, false, onClick = onCopy)
         AiActionIcon(painterResource(R.drawable.ic_like), R.string.ai_act_like, react == 1, onClick = onLike)
-        AiActionIcon(painterResource(R.drawable.ic_like), R.string.ai_act_dislike, react == -1, flip = true, onClick = onDislike)
         AiActionIcon(painterResource(R.drawable.ic_share), R.string.ai_act_share, false, onClick = onShare)
-        if (onResend != null) AiActionIcon(painterResource(R.drawable.ic_resend), R.string.ai_act_resend, false, onClick = onResend)
+        Box {
+            // tinted while a dislike is set, so the state is not hidden inside the menu
+            AiActionIcon(rememberVectorPainter(Icons.Rounded.MoreVert), R.string.ai_act_more, react == -1, size = 22.dp, onClick = { more = true })
+            DropdownMenu(expanded = more, onDismissRequest = { more = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.ai_act_dislike)) },
+                    leadingIcon = { Icon(painterResource(R.drawable.ic_like), contentDescription = null, modifier = Modifier.size(18.dp).graphicsLayer { scaleY = -1f }) },
+                    onClick = { more = false; onDislike() },
+                )
+                if (onResend != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.ai_act_resend)) },
+                        leadingIcon = { Icon(painterResource(R.drawable.ic_resend), contentDescription = null, modifier = Modifier.size(18.dp)) },
+                        onClick = { more = false; onResend() },
+                    )
+                }
+            }
+        }
     }
 }
 
 /** "Saved to memory: ..." under the reply that changed Candy's memory. */
 @Composable
 internal fun AiMemChips(m: AiMsg, onClick: () -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(start = 34.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(Modifier.fillMaxWidth().padding(start = 40.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         for (t in m.memAdded) MemChip("🧠 " + stringResource(R.string.ai_mem_saved, t), onClick)
         for (t in m.memRemoved) MemChip("🧠 " + stringResource(R.string.ai_mem_removed, t), onClick)
     }
@@ -295,7 +341,7 @@ internal fun AiDayChip(label: String) {
         Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Text(
                 label,
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
             )

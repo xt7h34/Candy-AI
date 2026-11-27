@@ -21,6 +21,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -146,6 +147,7 @@ fun ChatScreen(
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val cs = MaterialTheme.colorScheme
+    val candy = LocalCandy.current
 
     // A new chat only becomes a real conversation on the first message, so empty chats never pile up.
     var convId by remember { mutableStateOf(startId) }
@@ -392,8 +394,8 @@ fun ChatScreen(
         bg = cs.background.toArgb(),
         bubble = cs.surfaceContainerHigh.toArgb(),
         text = cs.onSurface.toArgb(),
-        accent = cs.primary.toArgb(),
-        mineText = cs.onPrimary.toArgb(),
+        accent = candy.userBubble.toArgb(),
+        mineText = candy.onUserBubble.toArgb(),
     )
     fun shareReply(text: String) {
         scope.launch {
@@ -626,7 +628,7 @@ fun ChatScreen(
                     .padding(horizontal = 10.dp, vertical = 8.dp)
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(cs.background.copy(alpha = 0.55f)),
+                    .background(cs.background.copy(alpha = 0.88f)),
                 contentAlignment = Alignment.Center,
             ) {
                 AppIconButton(Icons.Rounded.Menu, stringResource(R.string.menu), onMenu, tint = cs.onBackground)
@@ -678,7 +680,7 @@ fun ChatScreen(
                                     color = cs.surfaceContainerHigh,
                                     modifier = Modifier.clip(CircleShape).clickable { input = s },
                                 ) {
-                                    Text(s, color = cs.onSurface, modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp), style = MaterialTheme.typography.bodyMedium)
+                                    Text(s, color = cs.onSurface, modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), style = MaterialTheme.typography.bodyMedium)
                                 }
                             }
                             Spacer(Modifier.height(4.dp))
@@ -751,11 +753,16 @@ fun ChatScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     val inputBox: @Composable RowScope.() -> Unit = {
-                    Surface(shape = MaterialTheme.shapes.extraLarge, color = cs.surfaceContainerHigh, modifier = Modifier.weight(1f)) {
+                    Surface(
+                        shape = MaterialTheme.shapes.extraLarge,
+                        color = cs.surfaceContainerHigh,
+                        border = BorderStroke(1.dp, cs.outlineVariant),
+                        modifier = Modifier.weight(1f),
+                    ) {
                         Row(verticalAlignment = Alignment.Bottom) {
                             Box {
                                 Box(
-                                    Modifier.padding(start = 4.dp, bottom = 4.dp).size(40.dp).clip(CircleShape)
+                                    Modifier.padding(start = 2.dp, bottom = 2.dp).size(CandyDims.tap).clip(CircleShape)
                                         .clickable(enabled = !sending) { attachMenu = true },
                                     contentAlignment = Alignment.Center,
                                 ) {
@@ -792,16 +799,16 @@ fun ChatScreen(
                     val active = sending || canSend
                     Surface(
                         shape = CircleShape,
-                        color = if (active) cs.primary else cs.surfaceContainerHigh,
-                        modifier = Modifier.size(48.dp).clip(CircleShape).clickable(enabled = active) {
+                        color = if (active) candy.cta else cs.surfaceContainerHigh,
+                        modifier = Modifier.size(52.dp).clip(CircleShape).clickable(enabled = active) {
                             if (sending) stop() else if (showMic) onMicClick() else send()
                         },
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            val tint = if (active) cs.onPrimary else cs.onSurfaceVariant
+                            val tint = if (active) candy.onCta else cs.onSurfaceVariant
                             when {
                                 sending -> Icon(Icons.Rounded.Stop, contentDescription = stringResource(R.string.stop), tint = tint)
-                                showMic -> Icon(painterResource(R.drawable.ic_wave), contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
+                                showMic -> Icon(painterResource(R.drawable.ic_wave), contentDescription = stringResource(R.string.ai_act_record), tint = tint, modifier = Modifier.size(24.dp))
                                 else -> Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = stringResource(R.string.send), tint = tint)
                             }
                         }

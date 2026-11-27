@@ -55,4 +55,6 @@
     <string name="voice_no_permission">Allow the microphone to record a voice message</string>
     <string name="voice_record_failed">Couldn\'t start recording</string>
     <string name="voice_too_short">The recording is too short</string>
+    <string name="ai_act_more">More</string>
+    <string name="ai_act_record">Voice message</string>
 </resources>

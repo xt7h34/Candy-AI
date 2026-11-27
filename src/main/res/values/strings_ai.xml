@@ -55,4 +55,6 @@
     <string name="voice_no_permission">اسمح بالميكروفون عشان تسجل فويس</string>
     <string name="voice_record_failed">معرفتش أبدأ التسجيل</string>
     <string name="voice_too_short">التسجيل قصير أوي</string>
+    <string name="ai_act_more">المزيد</string>
+    <string name="ai_act_record">تسجيل صوتي</string>
 </resources>
