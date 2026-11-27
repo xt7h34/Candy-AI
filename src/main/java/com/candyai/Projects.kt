@@ -1,5 +1,6 @@
 package com.candyai
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.activity.compose.BackHandler
