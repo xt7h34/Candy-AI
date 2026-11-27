@@ -1,5 +1,6 @@
 package com.candyai
 
+import androidx.compose.material3.MaterialTheme
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -122,24 +123,15 @@ fun NotellaScreen(onBack: () -> Unit, onOpenChat: (String) -> Unit, onNewChat: (
     BackHandler { if (openId != null) openId = null else onBack() }
 
     Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { if (openId != null) openId = null else onBack() }) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = c.text)
-            }
+        ScreenHeader(
+            title = open?.name ?: stringResource(R.string.notella),
+            onBack = { if (openId != null) openId = null else onBack() },
+            dot = open?.let { projectColor(it.color) },
+        ) {
             if (open != null) {
-                Box(Modifier.size(12.dp).clip(CircleShape).background(projectColor(open.color)))
-                Spacer(Modifier.width(8.dp))
-            }
-            Text(
-                open?.name ?: stringResource(R.string.notella),
-                color = c.text, fontSize = 20.sp, fontWeight = FontWeight.Bold,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
-                style = TextStyle(textDirection = TextDirection.Content),
-            )
-            if (open != null) {
-                IconButton(onClick = { editing = open }) { Icon(Icons.Rounded.Edit, stringResource(R.string.notella_edit), tint = c.subtext) }
+                AppIconButton(Icons.Rounded.Edit, stringResource(R.string.notella_edit), { editing = open }, tint = c.subtext)
             } else {
-                IconButton(onClick = { creating = true }) { Icon(Icons.Rounded.Add, stringResource(R.string.notella_new), tint = c.accent) }
+                AddAction(stringResource(R.string.notella_new)) { creating = true }
             }
         }
 
@@ -153,7 +145,7 @@ fun NotellaScreen(onBack: () -> Unit, onOpenChat: (String) -> Unit, onNewChat: (
             open != null -> Column(Modifier.fillMaxSize()) {
                 LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp)) {
                     item {
-                        Text(stringResource(R.string.notella_sources), color = c.subtext, fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
+                        Text(stringResource(R.string.notella_sources), color = c.subtext, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(bottom = 6.dp))
                     }
                     if (sources.isEmpty()) {
                         item { Text(stringResource(R.string.notella_no_sources), color = c.subtext, fontSize = 14.sp, modifier = Modifier.padding(vertical = 8.dp)) }
@@ -179,13 +171,13 @@ fun NotellaScreen(onBack: () -> Unit, onOpenChat: (String) -> Unit, onNewChat: (
                     }
                     item {
                         Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            OutlinedButton(enabled = !busy, onClick = { pickFile.launch("*/*") }, modifier = Modifier.weight(1f)) {
-                                Icon(Icons.Rounded.Add, null, tint = c.accent)
+                            OutlinedButton(enabled = !busy, onClick = { pickFile.launch("*/*") }, modifier = Modifier.weight(1f).height(48.dp)) {
+                                Icon(Icons.Rounded.Add, null, tint = c.cta)
                                 Spacer(Modifier.width(4.dp))
                                 Text(stringResource(R.string.notella_add_file), color = c.text)
                             }
-                            OutlinedButton(enabled = !busy, onClick = { pasting = true }, modifier = Modifier.weight(1f)) {
-                                Icon(Icons.Rounded.Add, null, tint = c.accent)
+                            OutlinedButton(enabled = !busy, onClick = { pasting = true }, modifier = Modifier.weight(1f).height(48.dp)) {
+                                Icon(Icons.Rounded.Add, null, tint = c.cta)
                                 Spacer(Modifier.width(4.dp))
                                 Text(stringResource(R.string.notella_add_text), color = c.text)
                             }
@@ -198,7 +190,7 @@ fun NotellaScreen(onBack: () -> Unit, onOpenChat: (String) -> Unit, onNewChat: (
                         error?.let { Text(it, color = c.userBubble, fontSize = 13.sp, modifier = Modifier.padding(vertical = 4.dp)) }
                     }
                     if (chats.isNotEmpty()) {
-                        item { Text(stringResource(R.string.notella_chats), color = c.subtext, fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp)) }
+                        item { Text(stringResource(R.string.notella_chats), color = c.subtext, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp)) }
                         items(chats, key = { "c" + it.id }) { conv ->
                             Text(
                                 conv.title, color = c.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -210,29 +202,28 @@ fun NotellaScreen(onBack: () -> Unit, onOpenChat: (String) -> Unit, onNewChat: (
                 }
                 Button(
                     onClick = { onNewChat(open.id) },
-                    modifier = Modifier.fillMaxWidth().padding(16.dp).height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = projectColor(open.color), contentColor = Color.White),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp).height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = c.cta, contentColor = c.onCta),
                 ) {
-                    Text(stringResource(R.string.notella_chat), fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.notella_chat))
                 }
             }
-            list.isEmpty() -> Text(stringResource(R.string.notella_empty), color = c.subtext, fontSize = 14.sp, modifier = Modifier.fillMaxWidth().padding(32.dp))
+            list.isEmpty() -> EmptyState(
+                icon = { Image(painterResource(R.drawable.ic_notella), null, Modifier.size(64.dp)) },
+                message = stringResource(R.string.notella_empty),
+                actionLabel = stringResource(R.string.notella_new),
+                onAction = { creating = true },
+                modifier = Modifier.fillMaxSize(),
+            )
             else -> LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(list, key = { it.id }) { nb ->
-                    Surface(
-                        shape = RoundedCornerShape(18.dp), color = c.surface, border = BorderStroke(1.dp, c.border),
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { openId = nb.id },
-                    ) {
-                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Image(painterResource(R.drawable.ic_notella), null, Modifier.size(46.dp))
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(nb.name, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, style = TextStyle(textDirection = TextDirection.Content))
-                                Text(stringResource(R.string.notella_counts, nb.sources, nb.chats), color = c.subtext, fontSize = 12.sp)
-                            }
-                            Box(Modifier.size(14.dp).clip(CircleShape).background(projectColor(nb.color)))
-                        }
-                    }
+                    ListCard(
+                        title = nb.name,
+                        subtitle = stringResource(R.string.notella_counts, nb.sources, nb.chats),
+                        onClick = { openId = nb.id },
+                        icon = { Image(painterResource(R.drawable.ic_notella), null, Modifier.size(46.dp)) },
+                        trailing = { Box(Modifier.size(14.dp).clip(CircleShape).background(projectColor(nb.color))) },
+                    )
                 }
             }
         }

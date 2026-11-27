@@ -1,5 +1,6 @@
 package com.candyai
 
+import androidx.compose.material3.MaterialTheme
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
@@ -141,10 +142,7 @@ fun JarsScreen(onBack: () -> Unit, onOpen: (String) -> Unit, reloadKey: Int = 0)
         try { items = Api.jars(); error = null } catch (e: Exception) { error = errorMessage(ctx, e) }
     }
     Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = c.text) }
-            Text(stringResource(R.string.jars), color = c.text, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-        }
+        ScreenHeader(stringResource(R.string.jars), onBack)
         val list = items
         when {
             list == null && error != null -> Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -152,29 +150,24 @@ fun JarsScreen(onBack: () -> Unit, onOpen: (String) -> Unit, reloadKey: Int = 0)
                 TextButton(onClick = { reload++ }) { Text(stringResource(R.string.retry), color = c.userBubble) }
             }
             list == null -> Box(Modifier.fillMaxSize()) { CircularProgressIndicator(Modifier.align(Alignment.Center).size(28.dp), color = c.accent, strokeWidth = 3.dp) }
-            list.isEmpty() -> Text(stringResource(R.string.jars_empty), color = c.subtext, fontSize = 14.sp, modifier = Modifier.fillMaxWidth().padding(32.dp))
+            list.isEmpty() -> EmptyState(
+                icon = { JarIcon(56) },
+                message = stringResource(R.string.jars_empty),
+                modifier = Modifier.fillMaxSize(),
+            )
             else -> LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(list, key = { it.id }) { a ->
-                    Surface(
-                        shape = RoundedCornerShape(18.dp), color = c.surface, border = BorderStroke(1.dp, c.border),
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { onOpen(a.id) },
-                    ) {
-                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                            JarIcon(44)
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(a.title, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, style = TextStyle(textDirection = TextDirection.Content))
-                                Text("${stringResource(R.string.jar_files_n, a.files)} · ${timeText(a.updatedAt)}", color = c.subtext, fontSize = 12.sp)
-                            }
-                        }
-                    }
+                    ListCard(
+                        title = a.title,
+                        subtitle = "${stringResource(R.string.jar_files_n, a.files)} · ${timeText(a.updatedAt)}",
+                        onClick = { onOpen(a.id) },
+                        icon = { JarIcon(44) },
+                    )
                 }
             }
         }
     }
 }
-
-// ───────────── the viewer ─────────────
 
 private fun zipOf(files: List<JarFile>): ByteArray {
     val bos = java.io.ByteArrayOutputStream()

@@ -1,5 +1,6 @@
 package com.candyai
 
+import androidx.compose.material3.MaterialTheme
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
@@ -187,10 +188,7 @@ fun ArtifactsScreen(onBack: () -> Unit, onOpen: (String) -> Unit, reloadKey: Int
         try { items = Api.artifacts(); error = null } catch (e: Exception) { error = errorMessage(ctx, e) }
     }
     Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = c.text) }
-            Text(stringResource(R.string.artifacts), color = c.text, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-        }
+        ScreenHeader(stringResource(R.string.artifacts), onBack)
         val list = items
         when {
             list == null && error != null -> Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -198,24 +196,23 @@ fun ArtifactsScreen(onBack: () -> Unit, onOpen: (String) -> Unit, reloadKey: Int
                 TextButton(onClick = { reload++ }) { Text(stringResource(R.string.retry), color = c.userBubble) }
             }
             list == null -> Box(Modifier.fillMaxSize()) { CircularProgressIndicator(Modifier.align(Alignment.Center).size(28.dp), color = c.accent, strokeWidth = 3.dp) }
-            list.isEmpty() -> Text(stringResource(R.string.artifacts_empty), color = c.subtext, fontSize = 14.sp, modifier = Modifier.fillMaxWidth().padding(32.dp))
+            list.isEmpty() -> EmptyState(
+                icon = { Text("</>", color = c.cta, style = MaterialTheme.typography.headlineSmall.copy(fontFamily = FontFamily.Monospace)) },
+                message = stringResource(R.string.artifacts_empty),
+                modifier = Modifier.fillMaxSize(),
+            )
             else -> LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(list, key = { it.id }) { a ->
-                    Surface(
-                        shape = RoundedCornerShape(18.dp), color = c.surface, border = BorderStroke(1.dp, c.border),
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).clickable { onOpen(a.id) },
-                    ) {
-                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ListCard(
+                        title = a.title,
+                        subtitle = "${typeName(a.type)} · ${timeText(a.updatedAt)}",
+                        onClick = { onOpen(a.id) },
+                        icon = {
                             Box(Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(typeColor(a.type)), contentAlignment = Alignment.Center) {
-                                Text(typeGlyph(a.type), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                                Text(typeGlyph(a.type), color = Color.White, style = MaterialTheme.typography.titleSmall.copy(fontFamily = FontFamily.Monospace))
                             }
-                            Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(a.title, color = c.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, style = TextStyle(textDirection = TextDirection.Content))
-                                Text("${typeName(a.type)} · ${timeText(a.updatedAt)}", color = c.subtext, fontSize = 12.sp)
-                            }
-                        }
-                    }
+                        },
+                    )
                 }
             }
         }

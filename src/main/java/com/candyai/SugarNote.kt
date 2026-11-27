@@ -1,5 +1,8 @@
 package com.candyai
 
+import androidx.compose.material3.Surface
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.luminance
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -117,10 +120,8 @@ fun SugarNoteScreen(onBack: () -> Unit, startNew: Boolean = false) {
     BackHandler { onBack() }
 
     Column(Modifier.fillMaxSize().background(c.bg).statusBarsPadding().navigationBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = c.text) }
-            Text(stringResource(R.string.sugar), color = c.text, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            IconButton(onClick = { creating = true }) { Icon(Icons.Rounded.Add, stringResource(R.string.sugar_new), tint = c.accent) }
+        ScreenHeader(stringResource(R.string.sugar), onBack) {
+            AddAction(stringResource(R.string.sugar_new)) { creating = true }
         }
 
         val list = notes
@@ -130,7 +131,13 @@ fun SugarNoteScreen(onBack: () -> Unit, startNew: Boolean = false) {
                 TextButton(onClick = { reload++ }) { Text(stringResource(R.string.retry), color = c.userBubble) }
             }
             list == null -> Box(Modifier.fillMaxSize()) { CircularProgressIndicator(Modifier.align(Alignment.Center).size(28.dp), color = c.accent, strokeWidth = 3.dp) }
-            list.isEmpty() -> Text(stringResource(R.string.sugar_empty), color = c.subtext, fontSize = 14.sp, modifier = Modifier.fillMaxWidth().padding(32.dp))
+            list.isEmpty() -> EmptyState(
+                icon = { Text("📝", fontSize = 44.sp) },
+                message = stringResource(R.string.sugar_empty),
+                actionLabel = stringResource(R.string.sugar_new),
+                onAction = { creating = true },
+                modifier = Modifier.fillMaxSize(),
+            )
             else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 6.dp)) {
                 // cards zig-zag left and right, joined by dashed curves, like notes pinned on a board
                 list.forEachIndexed { i, n ->
@@ -212,6 +219,10 @@ private fun NoteConnector(fromLeft: Boolean) {
 @Composable
 private fun NoteCard(n: Note, number: Int, onClick: () -> Unit) {
     val outer = RoundedCornerShape(22.dp)
+    // in the dark theme the paper is dark too (white cards glared); the note colour only tints it
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val paper = if (dark) Color(0xFF3A1F4D) else Color.White
+    val ink = if (dark) Color(0xFFF3EAFB) else NoteInk
     val pin = pinColor(n.color)
     val title = n.text.substringBefore('\n').trim()
     val body = n.text.substringAfter('\n', "").trim()
@@ -220,33 +231,33 @@ private fun NoteCard(n: Note, number: Int, onClick: () -> Unit) {
             Modifier.fillMaxWidth()
                 .shadow(if (n.pinned) 14.dp else 8.dp, outer, ambientColor = Color(0x33000000), spotColor = Color(0x33000000))
                 .clip(outer)
-                .background(Color.White)
+                .background(paper)
                 .clickable(onClick = onClick)
                 .padding(10.dp),
         ) {
             Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp)).background(noteColor(n.color).copy(alpha = 0.6f)).padding(start = 14.dp, end = 14.dp, top = 18.dp, bottom = 14.dp),
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp)).background(noteColor(n.color).copy(alpha = if (dark) 0.22f else 0.6f)).padding(start = 14.dp, end = 14.dp, top = 18.dp, bottom = 14.dp),
             ) {
                 Text("%02d".format(number), color = pin, fontSize = 15.sp, fontWeight = FontWeight.Medium, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    title, color = NoteInk, fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis,
+                    title, color = ink, fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.Bold, maxLines = 3, overflow = TextOverflow.Ellipsis,
                     style = TextStyle(textDirection = TextDirection.Content),
                 )
                 if (body.isNotEmpty()) {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        body, color = NoteInk.copy(alpha = 0.62f), fontSize = 13.sp, lineHeight = 19.sp, maxLines = 6, overflow = TextOverflow.Ellipsis,
+                        body, color = ink.copy(alpha = 0.62f), fontSize = 13.sp, lineHeight = 19.sp, maxLines = 6, overflow = TextOverflow.Ellipsis,
                         style = TextStyle(textDirection = TextDirection.Content),
                     )
                 }
                 if (n.remindAt > System.currentTimeMillis()) {
                     Spacer(Modifier.height(8.dp))
-                    Text("🔔 " + formatWhen(n.remindAt), color = NoteInk.copy(alpha = 0.6f), fontSize = 11.sp)
+                    NoteChip("🔔 " + formatWhen(n.remindAt), ink)
                 }
                 if (HomeGeo.isWaiting(androidx.compose.ui.platform.LocalContext.current, n.id)) {
                     Spacer(Modifier.height(6.dp))
-                    Text("📍 " + stringResource(R.string.leave_remind), color = NoteInk.copy(alpha = 0.6f), fontSize = 11.sp)
+                    NoteChip("📍 " + stringResource(R.string.leave_remind), ink)
                 }
             }
             if (n.pinned) Text("★", color = pin, fontSize = 14.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 8.dp))
@@ -264,6 +275,14 @@ private fun NoteCard(n: Note, number: Int, onClick: () -> Unit) {
                     ),
                 ),
         )
+    }
+}
+
+/** A small pill for a reminder, big enough to read (it used to be 11sp text). */
+@Composable
+private fun NoteChip(text: String, ink: Color) {
+    Surface(shape = CircleShape, color = ink.copy(alpha = 0.1f)) {
+        Text(text, color = ink.copy(alpha = 0.85f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp))
     }
 }
 
