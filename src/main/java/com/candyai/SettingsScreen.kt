@@ -1,5 +1,7 @@
 package com.candyai
 
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Color
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -308,7 +310,7 @@ private fun SettingsSection(title: String, content: @Composable ColumnScope.() -
 
 /** One rounded card whose rows are separated by hairlines. */
 @Composable
-private fun SettingsRows(content: @Composable ColumnScope.() -> Unit) {
+internal fun SettingsRows(content: @Composable ColumnScope.() -> Unit) {
     val c = LocalCandy.current
     Surface(
         shape = RoundedCornerShape(CandyDims.cardRadius),
@@ -321,7 +323,7 @@ private fun SettingsRows(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-private fun SettingDivider() {
+internal fun SettingDivider() {
     androidx.compose.material3.HorizontalDivider(color = LocalCandy.current.border)
 }
 
@@ -330,7 +332,7 @@ private fun SettingDivider() {
  * and (optionally) a wider control underneath. With [onClick] the whole row is the target.
  */
 @Composable
-private fun SettingRow(
+internal fun SettingRow(
     title: String,
     hint: String? = null,
     onClick: (() -> Unit)? = null,
@@ -408,6 +410,71 @@ private fun SegText(text: String, color: androidx.compose.ui.graphics.Color, sel
         style = if (selected) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyMedium,
         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
     )
+}
+
+/** A line of status with a dot: green when fine, red when not. */
+@Composable
+internal fun SettingStatus(text: String, ok: Boolean = true) {
+    val c = LocalCandy.current
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(8.dp).clip(CircleShape).background(if (ok) Color(0xFF2E9E5B) else MaterialTheme.colorScheme.error))
+        Spacer(Modifier.width(10.dp))
+        Text(text, color = c.text, style = MaterialTheme.typography.titleSmall)
+    }
+}
+
+/** A few lines of explanation inside a settings card. */
+@Composable
+internal fun SettingNote(text: String, error: Boolean = false) {
+    Text(
+        text,
+        color = if (error) MaterialTheme.colorScheme.error else LocalCandy.current.subtext,
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+    )
+}
+
+/** A button inside a settings card: 48dp outlined, or 56dp filled when it is the main thing to do. */
+@Composable
+internal fun SettingButton(text: String, onClick: () -> Unit, primary: Boolean = false, full: Boolean = false, enabled: Boolean = true) {
+    val c = LocalCandy.current
+    val width = if (full) Modifier.fillMaxWidth() else Modifier
+    Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+        if (primary) {
+            androidx.compose.material3.Button(
+                onClick = onClick,
+                enabled = enabled,
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = c.cta, contentColor = c.onCta),
+                modifier = width.heightIn(min = 56.dp),
+            ) { Text(text) }
+        } else {
+            androidx.compose.material3.OutlinedButton(
+                onClick = onClick,
+                enabled = enabled,
+                border = BorderStroke(1.dp, if (enabled) c.cta else c.border),
+                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = c.cta),
+                modifier = width.heightIn(min = 48.dp),
+            ) { Text(text) }
+        }
+    }
+}
+
+/** One choice of a list of choices: the whole 52dp row picks it. */
+@Composable
+internal fun SettingRadio(text: String, selected: Boolean, onClick: () -> Unit) {
+    val c = LocalCandy.current
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable(role = androidx.compose.ui.semantics.Role.RadioButton, onClick = onClick).padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        androidx.compose.material3.RadioButton(
+            selected = selected,
+            onClick = null,
+            colors = androidx.compose.material3.RadioButtonDefaults.colors(selectedColor = c.cta),
+        )
+        Spacer(Modifier.width(12.dp))
+        Text(text, color = c.text, style = MaterialTheme.typography.bodyLarge)
+    }
 }
 
 /** A font choice that shows a sample written in that very font. */

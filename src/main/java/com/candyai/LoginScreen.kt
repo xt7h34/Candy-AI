@@ -1,5 +1,6 @@
 package com.candyai
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -86,34 +87,34 @@ fun LoginScreen(onGuest: () -> Unit, onGoogle: () -> Unit, googleBusy: Boolean =
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(stringResource(R.string.login_title), color = c.text, fontSize = 26.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-            Text(stringResource(R.string.login_subtitle), color = c.subtext, fontSize = 14.sp, textAlign = TextAlign.Center)
+            Text(stringResource(R.string.login_title), color = c.text, style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
+            Text(stringResource(R.string.login_subtitle), color = c.subtext, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
             Spacer(Modifier.height(6.dp))
 
             Button(
                 onClick = onGuest,
-                modifier = Modifier.fillMaxWidth().height(54.dp),
-                shape = RoundedCornerShape(27.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = c.accent, contentColor = c.onAccent),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = c.cta, contentColor = c.onCta),
             ) {
                 Icon(Icons.Rounded.Person, null, modifier = Modifier.size(22.dp))
                 Spacer(Modifier.width(10.dp))
-                Text(stringResource(R.string.login_guest), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text(stringResource(R.string.login_guest), style = MaterialTheme.typography.titleMedium)
             }
             OutlinedButton(
                 onClick = onGoogle,
                 enabled = !googleBusy,
-                modifier = Modifier.fillMaxWidth().height(54.dp),
-                shape = RoundedCornerShape(27.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(28.dp),
                 border = BorderStroke(1.dp, c.border),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = c.text),
             ) {
                 Icon(Icons.Rounded.Email, null, modifier = Modifier.size(22.dp))
                 Spacer(Modifier.width(10.dp))
-                Text(stringResource(R.string.login_google), fontSize = 15.sp)
+                Text(stringResource(R.string.login_google), style = MaterialTheme.typography.bodyLarge)
             }
             if (googleError != null) {
-                Text(googleError, color = c.subtext, fontSize = 13.sp, textAlign = TextAlign.Center)
+                Text(googleError, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
             }
             SoonButton(Icons.Rounded.Favorite, stringResource(R.string.login_candy))
         }
@@ -127,16 +128,16 @@ private fun SoonButton(icon: ImageVector, label: String) {
     OutlinedButton(
         onClick = {},
         enabled = false,
-        modifier = Modifier.fillMaxWidth().height(54.dp),
-        shape = RoundedCornerShape(27.dp),
+        modifier = Modifier.fillMaxWidth().height(56.dp),
+        shape = RoundedCornerShape(28.dp),
         border = BorderStroke(1.dp, c.border),
         colors = ButtonDefaults.outlinedButtonColors(disabledContentColor = c.subtext.copy(alpha = 0.8f)),
     ) {
         Icon(icon, null, modifier = Modifier.size(22.dp))
         Spacer(Modifier.width(10.dp))
-        Text(label, fontSize = 15.sp, modifier = Modifier.weight(1f))
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         Surface(shape = CircleShape, color = c.surface) {
-            Text(stringResource(R.string.login_soon), color = c.subtext, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp))
+            Text(stringResource(R.string.login_soon), color = c.subtext, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp))
         }
     }
 }

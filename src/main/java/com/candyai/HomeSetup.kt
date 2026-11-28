@@ -1,5 +1,11 @@
 package com.candyai
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
@@ -76,39 +82,53 @@ fun HomeSetupDialog(onDismiss: () -> Unit, onSaved: () -> Unit) {
         title = { Text(stringResource(R.string.home_title), color = c.text) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(stringResource(R.string.home_desc), color = c.subtext, fontSize = 13.sp)
-                Button(onClick = { start() }, enabled = !busy) {
-                    if (busy) CircularProgressIndicator(Modifier.height(18.dp), color = c.onAccent, strokeWidth = 2.dp)
+                Text(stringResource(R.string.home_desc), color = c.subtext, style = MaterialTheme.typography.bodyMedium)
+                Button(
+                    onClick = { start() },
+                    enabled = !busy,
+                    colors = ButtonDefaults.buttonColors(containerColor = c.cta, contentColor = c.onCta),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                ) {
+                    if (busy) CircularProgressIndicator(Modifier.height(18.dp), color = c.onCta, strokeWidth = 2.dp)
                     else Text(stringResource(if (home == null) R.string.home_use_here else R.string.home_update_here))
                 }
-                if (home != null) Text(stringResource(R.string.home_set), color = c.text, fontSize = 14.sp)
-                if (failed) Text(stringResource(R.string.home_failed), color = c.subtext, fontSize = 13.sp)
+                if (home != null) Text(stringResource(R.string.home_set), color = c.text, style = MaterialTheme.typography.bodyMedium)
+                if (failed) Text(stringResource(R.string.home_failed), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
                 if (needBg) {
-                    Text(stringResource(R.string.home_need_bg), color = c.subtext, fontSize = 13.sp)
+                    Text(stringResource(R.string.home_need_bg), color = c.subtext, style = MaterialTheme.typography.bodyMedium)
                     TextButton(onClick = {
                         try {
                             ctx.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + ctx.packageName)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                         } catch (_: Exception) { }
-                    }) { Text(stringResource(R.string.home_open_settings), color = c.userBubble) }
+                    }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.home_open_settings), color = c.cta) }
                 }
                 Spacer(Modifier.height(2.dp))
-                Text(stringResource(R.string.home_radius, radius.toInt()), color = c.text, fontSize = 14.sp)
+                Text(stringResource(R.string.home_radius, radius.toInt()), color = c.text, style = MaterialTheme.typography.titleSmall)
                 Slider(
                     value = radius,
                     onValueChange = { radius = (Math.round(it / 10f) * 10).toFloat() },
                     onValueChangeFinished = { if (home != null) HomeGeo.setRadius(ctx, radius.toInt()) },
                     valueRange = HomeGeo.MIN_RADIUS.toFloat()..HomeGeo.MAX_RADIUS.toFloat(),
                     steps = (HomeGeo.MAX_RADIUS - HomeGeo.MIN_RADIUS) / 10 - 1,
+                    colors = SliderDefaults.colors(
+                        thumbColor = c.cta, activeTrackColor = c.cta, inactiveTrackColor = c.border,
+                        activeTickColor = Color.Transparent, inactiveTickColor = Color.Transparent,
+                    ),
                 )
-                Text(stringResource(R.string.home_radius_hint), color = c.subtext, fontSize = 12.sp)
+                Text(stringResource(R.string.home_radius_hint), color = c.subtext, style = MaterialTheme.typography.bodySmall)
             }
         },
         confirmButton = {
-            TextButton(enabled = home != null, onClick = {
-                if (home != null) HomeGeo.setRadius(ctx, radius.toInt())
-                onSaved()
-            }) { Text(stringResource(R.string.home_done), color = c.userBubble) }
+            Button(
+                enabled = home != null,
+                onClick = {
+                    if (home != null) HomeGeo.setRadius(ctx, radius.toInt())
+                    onSaved()
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = c.cta, contentColor = c.onCta),
+                modifier = Modifier.heightIn(min = 48.dp),
+            ) { Text(stringResource(R.string.home_done)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel), color = c.subtext) } },
+        dismissButton = { TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.cancel), color = c.text) } },
     )
 }

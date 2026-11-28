@@ -50,51 +50,43 @@ fun AgentSettingsCard() {
     }
     fun open(i: Intent) { try { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) { } }
 
-    SettingsCardPublic {
-        Text(stringResource(R.string.agent_settings_title), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text(stringResource(R.string.agent_settings_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 10.dp))
-
-        Text(stringResource(if (serviceOn) R.string.agent_svc_on else R.string.agent_svc_off), color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    SettingsRows {
+        SettingRow(stringResource(R.string.agent_settings_title), stringResource(R.string.agent_settings_hint))
+        SettingDivider()
+        SettingStatus(stringResource(if (serviceOn) R.string.agent_svc_on else R.string.agent_svc_off), ok = serviceOn)
         if (!serviceOn) {
-            Text(stringResource(R.string.agent_restricted_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
-            Column(Modifier.fillMaxWidth()) {
-                TextButton(onClick = { open(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }) { Text(stringResource(R.string.agent_enable), color = c.userBubble) }
-                TextButton(onClick = { open(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + ctx.packageName))) }) {
-                    Text(stringResource(R.string.agent_app_info), color = c.userBubble)
-                }
-            }
+            SettingNote(stringResource(R.string.agent_restricted_hint))
+            SettingButton(stringResource(R.string.agent_enable), { open(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }, primary = true)
+            SettingButton(stringResource(R.string.agent_app_info), { open(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + ctx.packageName))) })
+        }
+        assistant?.let {
+            SettingDivider()
+            SettingStatus(stringResource(if (it) R.string.agent_assistant_on else R.string.agent_assistant_off), ok = it)
         }
 
-        assistant?.let {
-            Text(
-                stringResource(if (it) R.string.agent_assistant_on else R.string.agent_assistant_off), color = c.text, fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 12.dp),
+        // "ask once, then always": the kinds Candy may do without asking (a whole row is one switch)
+        var auto by remember { mutableStateOf(Store.autoActions) }
+        SettingDivider()
+        SettingRow(stringResource(R.string.agent_auto_title), stringResource(R.string.agent_auto_hint))
+        for (g in AgentActions.GROUPS) {
+            SettingDivider()
+            SettingRow(
+                stringResource(when (g) { "clock" -> R.string.agent_g_clock; "calendar" -> R.string.agent_g_calendar; "phone" -> R.string.agent_g_phone; "sms" -> R.string.agent_g_sms; "agent" -> R.string.agent_g_agent; else -> R.string.agent_g_open }),
+                onClick = { auto = if (g in auto) auto - g else auto + g; Store.autoActions = auto },
+                trailing = { Switch(checked = g in auto, onCheckedChange = null) },
             )
         }
 
-        // "ask once, then always": the kinds Candy may do without asking
-        var auto by remember { mutableStateOf(Store.autoActions) }
-        Text(stringResource(R.string.agent_auto_title), color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp))
-        Text(stringResource(R.string.agent_auto_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 4.dp))
-        for (g in AgentActions.GROUPS) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    stringResource(when (g) { "clock" -> R.string.agent_g_clock; "calendar" -> R.string.agent_g_calendar; "phone" -> R.string.agent_g_phone; "sms" -> R.string.agent_g_sms; "agent" -> R.string.agent_g_agent; else -> R.string.agent_g_open }),
-                    color = c.text, fontSize = 14.sp, modifier = Modifier.weight(1f),
-                )
-                Switch(checked = g in auto, onCheckedChange = { on -> auto = if (on) auto + g else auto - g; Store.autoActions = auto })
-            }
-        }
-
         if (Build.VERSION.SDK_INT >= 26) {
-            Text(stringResource(R.string.agent_hide_notif_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
-            TextButton(onClick = {
+            SettingDivider()
+            SettingNote(stringResource(R.string.agent_hide_notif_hint))
+            SettingButton(stringResource(R.string.agent_hide_notif), {
                 open(
                     Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
                         .putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
                         .putExtra(Settings.EXTRA_CHANNEL_ID, "candy_overlay_quiet"),
                 )
-            }) { Text(stringResource(R.string.agent_hide_notif), color = c.userBubble) }
+            })
         }
     }
 }

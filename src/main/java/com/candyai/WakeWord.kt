@@ -1,5 +1,6 @@
 package com.candyai
 
+import androidx.compose.material3.MaterialTheme
 import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
@@ -405,44 +406,43 @@ fun WakeSettingsCard() {
         if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) mic.launch(Manifest.permission.RECORD_AUDIO) else turnOn()
     }
 
-    SettingsCardPublic {
-        Text(stringResource(R.string.wake_title), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text(stringResource(R.string.wake_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 10.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(if (on) R.string.wake_on else R.string.wake_off), color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Switch(checked = on, onCheckedChange = { if (progress == null) toggle(it) })
-        }
+    SettingsRows {
+        SettingRow(stringResource(R.string.wake_title), stringResource(R.string.wake_hint))
+        SettingDivider()
+        // the whole row is the switch
+        SettingRow(
+            stringResource(if (on) R.string.wake_on else R.string.wake_off),
+            onClick = { if (progress == null) toggle(!on) },
+            trailing = { Switch(checked = on, onCheckedChange = null) },
+        )
         val p = progress
         if (p != null) {
-            Text(stringResource(R.string.wake_downloading), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
-            LinearProgressIndicator(progress = { p }, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
-        }
-        if (error.isNotBlank()) Text(error, color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
-
-        Text(stringResource(R.string.wake_phrases), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
-
-        Text(stringResource(R.string.wake_action_title), color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp))
-        for ((id, label) in listOf("edge_voice" to R.string.wake_a_voice, "edge_type" to R.string.wake_a_type, "voice_only" to R.string.wake_a_silent)) {
-            Row(Modifier.fillMaxWidth().clickable { action = id; Store.wakeAction = id }, verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(selected = action == id, onClick = { action = id; Store.wakeAction = id })
-                Text(stringResource(label), color = c.text, fontSize = 13.sp)
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(stringResource(R.string.wake_downloading), color = c.subtext, style = MaterialTheme.typography.bodySmall)
+                LinearProgressIndicator(progress = { p }, color = c.cta, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
             }
+        }
+        if (error.isNotBlank()) SettingNote(error, error = true)
+        SettingNote(stringResource(R.string.wake_phrases))
+
+        SettingDivider()
+        SettingRow(stringResource(R.string.wake_action_title))
+        for ((id, label) in listOf("edge_voice" to R.string.wake_a_voice, "edge_type" to R.string.wake_a_type, "voice_only" to R.string.wake_a_silent)) {
+            SettingRadio(stringResource(label), action == id) { action = id; Store.wakeAction = id }
         }
         if (action != "voice_only" && !overlay) {
-            Text(stringResource(R.string.wake_overlay_hint), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-            TextButton(onClick = {
+            SettingNote(stringResource(R.string.wake_overlay_hint))
+            SettingButton(stringResource(R.string.wake_overlay_btn), {
                 try { ctx.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + ctx.packageName)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) { }
-            }) { Text(stringResource(R.string.wake_overlay_btn), color = c.userBubble) }
+            })
         }
 
-        Text(stringResource(R.string.wake_sens_title), color = c.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp))
+        SettingDivider()
+        SettingRow(stringResource(R.string.wake_sens_title))
         for ((id, label) in listOf(0 to R.string.wake_s_low, 1 to R.string.wake_s_mid, 2 to R.string.wake_s_high)) {
-            Row(Modifier.fillMaxWidth().clickable { sens = id; Store.wakeSens = id }, verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(selected = sens == id, onClick = { sens = id; Store.wakeSens = id })
-                Text(stringResource(label), color = c.text, fontSize = 13.sp)
-            }
+            SettingRadio(stringResource(label), sens == id) { sens = id; Store.wakeSens = id }
         }
-        Text(stringResource(R.string.wake_limits), color = c.subtext, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
-        if (ready && !on) TextButton(onClick = { WakeModel.delete(ctx); ready = false }) { Text(stringResource(R.string.wake_delete_model), color = c.subtext, fontSize = 13.sp) }
+        SettingNote(stringResource(R.string.wake_limits))
+        if (ready && !on) SettingButton(stringResource(R.string.wake_delete_model), { WakeModel.delete(ctx); ready = false })
     }
 }

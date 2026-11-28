@@ -433,74 +433,48 @@ internal fun UpdateSection() {
     val info = UpdateState.info
 
     val c = LocalCandy.current
-    val shape = RoundedCornerShape(18.dp)
-    Surface(
-        shape = shape,
-        color = c.surface,
-        border = BorderStroke(1.dp, c.border),
-        modifier = Modifier.fillMaxWidth().clip(shape),
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(stringResource(R.string.upd_title), color = c.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Text(
-                stringResource(R.string.upd_current, Updater.installedName(context)),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            val line = when (status) {
-                US_CHECKING -> stringResource(R.string.upd_checking)
-                US_UP_TO_DATE -> stringResource(R.string.upd_uptodate)
-                US_NEW, US_DOWNLOADING, US_READY -> stringResource(R.string.upd_new, info?.name ?: "")
-                US_FAILED -> stringResource(R.string.upd_failed)
-                US_BAD_FILE -> stringResource(R.string.upd_bad_file)
-                US_NOT_CONFIGURED -> stringResource(R.string.upd_noconfig)
-                else -> ""
-            }
-            if (line.isNotEmpty()) {
-                Text(
-                    line,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (status == US_FAILED || status == US_BAD_FILE) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (info != null && (status == US_NEW || status == US_DOWNLOADING || status == US_READY)) {
-                if (status == US_DOWNLOADING) {
-                    LinearProgressIndicator(progress = { UpdateState.progress }, modifier = Modifier.fillMaxWidth())
-                    Text(stringResource(R.string.upd_downloading, (UpdateState.progress * 100).toInt()))
-                } else if (status == US_READY) {
-                    if (UpdateState.needsPermission) Text(stringResource(R.string.upd_allow))
-                    Button(onClick = { UpdateState.install(context) }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.upd_install))
-                    }
-                } else {
-                    Button(
-                        onClick = { scope.launch { UpdateState.downloadAndInstall(context) } },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text(stringResource(R.string.upd_download)) }
+    SettingsRows {
+        SettingRow(stringResource(R.string.upd_title), stringResource(R.string.upd_current, Updater.installedName(context)))
+        val line = when (status) {
+            US_CHECKING -> stringResource(R.string.upd_checking)
+            US_UP_TO_DATE -> stringResource(R.string.upd_uptodate)
+            US_NEW, US_DOWNLOADING, US_READY -> stringResource(R.string.upd_new, info?.name ?: "")
+            US_FAILED -> stringResource(R.string.upd_failed)
+            US_BAD_FILE -> stringResource(R.string.upd_bad_file)
+            US_NOT_CONFIGURED -> stringResource(R.string.upd_noconfig)
+            else -> ""
+        }
+        if (line.isNotEmpty()) SettingNote(line, error = status == US_FAILED || status == US_BAD_FILE)
+        if (info != null && (status == US_NEW || status == US_DOWNLOADING || status == US_READY)) {
+            if (status == US_DOWNLOADING) {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LinearProgressIndicator(progress = { UpdateState.progress }, color = c.cta, modifier = Modifier.fillMaxWidth())
+                    Text(stringResource(R.string.upd_downloading, (UpdateState.progress * 100).toInt()), style = MaterialTheme.typography.bodySmall)
                 }
-            }
-            OutlinedButton(
-                onClick = {
-                    UpdateState.postponed = false
-                    scope.launch { UpdateState.check(context) }
-                },
-                enabled = status != US_CHECKING && status != US_DOWNLOADING,
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.upd_check)) }
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(stringResource(R.string.upd_auto))
-                Switch(
-                    checked = auto,
-                    onCheckedChange = {
-                        auto = it
-                        UpdatePrefs.setAuto(context, it)
-                    },
-                )
+            } else if (status == US_READY) {
+                if (UpdateState.needsPermission) SettingNote(stringResource(R.string.upd_allow))
+                SettingButton(stringResource(R.string.upd_install), { UpdateState.install(context) }, primary = true, full = true)
+            } else {
+                SettingButton(stringResource(R.string.upd_download), { scope.launch { UpdateState.downloadAndInstall(context) } }, primary = true, full = true)
             }
         }
+        SettingButton(
+            stringResource(R.string.upd_check),
+            {
+                UpdateState.postponed = false
+                scope.launch { UpdateState.check(context) }
+            },
+            full = true,
+            enabled = status != US_CHECKING && status != US_DOWNLOADING,
+        )
+        SettingDivider()
+        SettingRow(
+            stringResource(R.string.upd_auto),
+            onClick = {
+                auto = !auto
+                UpdatePrefs.setAuto(context, auto)
+            },
+            trailing = { Switch(checked = auto, onCheckedChange = null) },
+        )
     }
 }
