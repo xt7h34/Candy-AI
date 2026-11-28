@@ -342,4 +342,14 @@
     <string name="wake_note_title">Candy is listening</string>
     <string name="wake_note_text">Say \"Hey Candy\"</string>
     <string name="wake_note_stop">Stop</string>
+    <string name="outfit_title">Candy outfits</string>
+    <string name="outfit_hint">See her full length and change her clothes</string>
+    <string name="outfit_pick">Pick an outfit</string>
+    <string name="outfit_apply">Apply</string>
+    <string name="outfit_applied">Current outfit</string>
+    <string name="outfit_default">Classic</string>
+    <string name="outfit_rain">Rain</string>
+    <string name="outfit_green">Green</string>
+    <string name="outfit_stars">Stars</string>
+    <string name="outfit_academy">Academy</string>
 </resources>

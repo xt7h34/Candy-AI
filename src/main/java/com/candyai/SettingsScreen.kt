@@ -90,6 +90,7 @@ fun SettingsScreen(
     onSendSide: (String) -> Unit,
     onClose: () -> Unit,
     onOpenMemory: () -> Unit,
+    onOpenOutfits: () -> Unit,
     onServerChanged: () -> Unit,
 ) {
     val c = LocalCandy.current
@@ -192,6 +193,15 @@ fun SettingsScreen(
                         stringResource(R.string.settings_memory_hint),
                         onClick = onOpenMemory,
                         leading = { Icon(Icons.Rounded.Psychology, null, tint = c.cta, modifier = Modifier.size(28.dp)) },
+                        trailing = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.subtext) },
+                    )
+                    SettingDivider()
+                    // her outfits: opens the full-body screen
+                    SettingRow(
+                        stringResource(R.string.outfit_title),
+                        stringResource(R.string.outfit_hint),
+                        onClick = onOpenOutfits,
+                        leading = { OutfitThumb(34.dp) },
                         trailing = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = c.subtext) },
                     )
                     SettingDivider()

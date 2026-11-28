@@ -417,7 +417,7 @@ internal fun CandyPeek(width: Dp, height: Dp, animated: Boolean, talkTick: Int, 
                         },
                 ) {
                     Image(
-                        painter = painterResource(R.drawable.peek_body),
+                        painter = painterResource(CandyOutfits.res(R.drawable.peek_body)),
                         contentDescription = null,
                         contentScale = ContentScale.FillBounds,
                         modifier = Modifier.fillMaxSize(),

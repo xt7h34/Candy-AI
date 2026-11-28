@@ -179,6 +179,7 @@ object ThemeMode {
     fun load() {
         mode = Store.themeMode
         font = Store.fontChoice
+        CandyOutfits.load()
     }
 
     fun chooseFont(f: String) {

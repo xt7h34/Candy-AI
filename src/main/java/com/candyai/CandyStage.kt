@@ -325,7 +325,7 @@ internal fun CandyStage(animated: Boolean, talkTick: Int, talkMs: Long, lastActi
                     },
                 ) {
                     // what she is doing now: a pose picture, or the usual body with its animated eyes and mouth (asleep = closed eyes and the Z)
-                    val shown: Int? = pose.res
+                    val shown: Int? = pose.res?.let { CandyOutfits.res(it) }
                     Crossfade(targetState = shown, animationSpec = tween(140), label = "stage-pose") { picture ->
                         Box(Modifier.fillMaxSize()) {
                             if (picture != null) {
@@ -337,7 +337,7 @@ internal fun CandyStage(animated: Boolean, talkTick: Int, talkMs: Long, lastActi
                                 )
                             } else {
                                 Image(
-                                    painter = painterResource(R.drawable.candy_stage_body),
+                                    painter = painterResource(CandyOutfits.res(R.drawable.candy_stage_body)),
                                     contentDescription = null,
                                     contentScale = ContentScale.FillBounds,
                                     modifier = Modifier.fillMaxSize(),

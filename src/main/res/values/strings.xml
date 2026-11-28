@@ -344,4 +344,14 @@
     <string name="wake_note_title">كاندي سامعة</string>
     <string name="wake_note_text">قول «Hey Candy»</string>
     <string name="wake_note_stop">إيقاف</string>
+    <string name="outfit_title">ملابس كاندي</string>
+    <string name="outfit_hint">شوفها كاملة وغيّر لبسها</string>
+    <string name="outfit_pick">اختار اللبس</string>
+    <string name="outfit_apply">تطبيق</string>
+    <string name="outfit_applied">ده اللبس الحالي</string>
+    <string name="outfit_default">الأساسي</string>
+    <string name="outfit_rain">Rain</string>
+    <string name="outfit_green">Green</string>
+    <string name="outfit_stars">Stars</string>
+    <string name="outfit_academy">Academy</string>
 </resources>

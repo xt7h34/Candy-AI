@@ -164,6 +164,7 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}, pen
     var chatKey by remember { mutableIntStateOf(0) }
     var listKey by remember { mutableIntStateOf(0) }
     var memoryOpen by remember { mutableStateOf(false) }
+    var outfitOpen by remember { mutableStateOf(false) }
     var settingsOpen by rememberSaveable { mutableStateOf(false) }
     var side by remember { mutableStateOf(Store.drawerSide) }
     var sendSide by remember { mutableStateOf(Store.sendSide) }
@@ -300,6 +301,7 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}, pen
                 },
                 onClose = { settingsOpen = false },
                 onOpenMemory = { memoryOpen = true },
+                onOpenOutfits = { outfitOpen = true },
                 onServerChanged = {
                     // another server means another account: start clean
                     listKey++
@@ -344,6 +346,12 @@ fun CandyApp(pendingConv: String? = null, onPendingHandled: () -> Unit = {}, pen
             BackHandler { memoryOpen = false }
             Box(Modifier.fillMaxSize().background(c.bg)) {
                 MemoryScreen(onBack = { memoryOpen = false })
+            }
+        }
+        if (outfitOpen) {
+            BackHandler { outfitOpen = false }
+            Box(Modifier.fillMaxSize().background(c.bg)) {
+                OutfitScreen(onBack = { outfitOpen = false })
             }
         }
     }

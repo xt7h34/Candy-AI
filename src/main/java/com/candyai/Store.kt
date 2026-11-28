@@ -111,4 +111,9 @@ object Store {
     var fontChoice: String
         get() = sp.getString("font", "amman").let { if (it == "cairo") "cairo" else "amman" }
         set(v) { sp.edit().putString("font", if (v == "cairo") "cairo" else "amman").apply() }
+
+    /** Which outfit Candy wears: "default", "rain", "green", "stars" or "academy" (see CandyOutfits). */
+    var outfit: String
+        get() = sp.getString("outfit", "default") ?: "default"
+        set(v) { sp.edit().putString("outfit", v).apply() }
 }

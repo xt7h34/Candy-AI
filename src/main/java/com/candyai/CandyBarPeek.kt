@@ -66,7 +66,7 @@ internal fun CandyBarPeek(
     val peek = listOf(PEEK_OPEN, PEEK_SIDE, PEEK_HALF, PEEK_CLOSED)
     val lean = listOf(LEAN_OPEN, LEAN_SIDE, LEAN_HALF, LEAN_CLOSED)
     val peekBmp = peek.map { ImageBitmap.imageResource(it.res) }
-    val leanBmp = lean.map { ImageBitmap.imageResource(it.res) }
+    val leanBmp = lean.map { ImageBitmap.imageResource(CandyOutfits.res(it.res)) }
     val rise1 = ImageBitmap.imageResource(RISE_1.res)
     val rise2 = ImageBitmap.imageResource(RISE_2.res)
 
