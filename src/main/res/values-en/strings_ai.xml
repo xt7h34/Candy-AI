@@ -69,4 +69,10 @@
     <string name="settings_font">Font</string>
     <string name="settings_font_hint">Changes instantly across the app</string>
     <string name="font_sample">Candy Aa</string>
+    <string name="msg_not_sent">Not sent</string>
+    <string name="msg_resend">Send again</string>
+    <string name="msg_edit">Edit</string>
+    <string name="msg_dismiss">Dismiss</string>
+    <string name="msg_ok">OK</string>
+    <string name="chat_new_reply">New reply</string>
 </resources>

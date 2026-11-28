@@ -1,5 +1,6 @@
 package com.candyai
 
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.foundation.layout.statusBarsPadding
 import android.Manifest
 import android.content.ClipData
@@ -159,6 +160,12 @@ fun ChatScreen(
     var input by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf("") }
+    var errorCanRetry by remember { mutableStateOf(true) }
+    var note by remember { mutableStateOf("") }               // a small message that goes away by itself
+    var failed by remember { mutableStateOf<FailedSend?>(null) } // a message that never left the phone
+    var stickToEnd by remember { mutableStateOf(true) }        // follow new text only while the reader is at the end
+    var unseen by remember { mutableStateOf(false) }           // something new arrived below the reader
+    var autoScrolling by remember { mutableStateOf(false) }
     // notes Candy wrote in her last reply: she then asks when to remind about them
     var reminderAsk by remember { mutableStateOf<ReminderAsk?>(null) }
     var agentActions by remember { mutableStateOf<List<AgentAction>>(emptyList()) }
@@ -185,6 +192,29 @@ fun ChatScreen(
     val reduceMotion = remember { Settings.Global.getFloat(ctx.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }
     val animated = !reduceMotion
 
+    fun showError(e: Throwable) {
+        showError(e)
+        // a limit that resets tomorrow cannot be fixed by trying again, so it gets no "try again" button
+        errorCanRetry = !(e is ApiException && (e.code == "daily_limit" || e.code == "image_limit" || e.code == "voice_limit"))
+    }
+
+    fun showNote(res: Int) { note = ctx.getString(res) }
+
+    suspend fun scrollToEnd(animate: Boolean) {
+        autoScrolling = true
+        try {
+            val total = listState.layoutInfo.totalItemsCount
+            if (total > 0) {
+                if (animate) listState.animateScrollToItem(total - 1) else listState.scrollToItem(total - 1)
+                listState.scrollBy(1_000_000f)
+            }
+        } finally {
+            autoScrolling = false
+            stickToEnd = true
+            unseen = false
+        }
+    }
+
     fun refreshVoice() {
         scope.launch { try { voice = Api.voiceStatus() } catch (_: Exception) { } }
     }
@@ -199,7 +229,7 @@ fun ChatScreen(
                 msgs.addAll(list)
                 error = ""
             } catch (e: Exception) {
-                error = errorMessage(ctx, e)
+                showError(e)
             }
             loading = false
         }
@@ -300,7 +330,7 @@ fun ChatScreen(
                 }
                 refreshVoice()
             } catch (e: Exception) {
-                error = errorMessage(ctx, e)
+                showError(e)
             } finally {
                 voiceBusy = -1L
             }
@@ -312,6 +342,8 @@ fun ChatScreen(
         if ((text.isEmpty() && pending.isEmpty()) || sending) return
         sending = true
         error = ""
+        failed = null
+        stickToEnd = true
         input = ""
         val files = pending.toList()
         pending.clear()
@@ -333,9 +365,8 @@ fun ChatScreen(
                     if (last != null && !last.mine && last.n > 0) speak(last.n)
                 }
             } catch (e: Exception) {
-                error = errorMessage(ctx, e)
-                // the message never reached the server: give the text back so nothing is lost
-                if (!sent) { input = text; pending.addAll(files) }
+                // the message never reached the server: it stays in the chat as "not sent", with a button to send it again
+                if (!sent) failed = FailedSend(text, files, errorMessage(ctx, e)) else showError(e)
             } finally {
                 sending = false
                 jobId = null
@@ -360,7 +391,7 @@ fun ChatScreen(
             } catch (e: Exception) {
                 val at = msgs.indexOfFirst { it.n == n }
                 if (at >= 0) msgs[at] = msgs[at].withReact(old.react)
-                error = errorMessage(ctx, e)
+                showError(e)
             }
         }
     }
@@ -380,7 +411,7 @@ fun ChatScreen(
                 started = true
                 follow(job)
             } catch (e: Exception) {
-                error = errorMessage(ctx, e)
+                showError(e)
                 if (!started) msgs.add(last)
             } finally {
                 sending = false
@@ -399,7 +430,7 @@ fun ChatScreen(
     )
     fun shareReply(text: String) {
         scope.launch {
-            if (!shareAiReply(ctx, text, snapColors)) error = ctx.getString(R.string.ai_share_fail)
+            if (!shareAiReply(ctx, text, snapColors)) showNote(R.string.ai_share_fail)
         }
     }
 
@@ -409,7 +440,7 @@ fun ChatScreen(
         val list = msgs.filter { it.mine || it.n > 0 }.map { AiSnapMsg(it.text, it.mine) }
         if (list.isEmpty()) return
         scope.launch {
-            if (!shareAiConversation(ctx, list, snapColors)) error = ctx.getString(R.string.ai_share_fail)
+            if (!shareAiConversation(ctx, list, snapColors)) showNote(R.string.ai_share_fail)
         }
     }
 
@@ -418,11 +449,11 @@ fun ChatScreen(
     // ───── the + button: camera, gallery, text file ─────
     fun addImages(uris: List<Uri>) {
         val room = AttachKit.MAX_FILES - pending.size
-        if (room <= 0) { error = ctx.getString(R.string.attach_max); return }
+        if (room <= 0) { showNote(R.string.attach_max); return }
         scope.launch {
             for (u in uris.take(room)) {
                 val p = AttachKit.fromImage(ctx, u)
-                if (p != null) pending.add(p) else error = ctx.getString(R.string.attach_fail)
+                if (p != null) pending.add(p) else showNote(R.string.attach_fail)
             }
         }
     }
@@ -436,7 +467,7 @@ fun ChatScreen(
             if (ok) {
                 scope.launch {
                     val p = if (pending.size < AttachKit.MAX_FILES) AttachKit.fromImage(ctx, Uri.fromFile(f)) else null
-                    if (p != null) pending.add(p) else error = ctx.getString(R.string.attach_fail)
+                    if (p != null) pending.add(p) else showNote(R.string.attach_fail)
                     f.delete()
                 }
             } else {
@@ -446,22 +477,22 @@ fun ChatScreen(
     }
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
-            if (pending.size >= AttachKit.MAX_FILES) { error = ctx.getString(R.string.attach_max); return@rememberLauncherForActivityResult }
+            if (pending.size >= AttachKit.MAX_FILES) { showNote(R.string.attach_max); return@rememberLauncherForActivityResult }
             scope.launch {
                 val p = AttachKit.fromDocument(ctx, uri)
-                if (p != null) pending.add(p) else error = ctx.getString(R.string.attach_fail)
+                if (p != null) pending.add(p) else showNote(R.string.attach_fail)
             }
         }
     }
     fun openCamera() {
-        if (pending.size >= AttachKit.MAX_FILES) { error = ctx.getString(R.string.attach_max); return }
+        if (pending.size >= AttachKit.MAX_FILES) { showNote(R.string.attach_max); return }
         try {
             val dir = File(ctx.cacheDir, "updates").apply { mkdirs() }
             val f = File.createTempFile("cam_", ".jpg", dir)
             camFile = f
             cameraLauncher.launch(FileProvider.getUriForFile(ctx, "${ctx.packageName}.updates", f))
         } catch (e: Exception) {
-            error = ctx.getString(R.string.attach_fail)
+            showNote(R.string.attach_fail)
         }
     }
 
@@ -475,12 +506,12 @@ fun ChatScreen(
             amps.clear()
             error = ""
         } else {
-            error = ctx.getString(R.string.voice_record_failed)
+            showNote(R.string.voice_record_failed)
         }
     }
 
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) startRecording() else error = ctx.getString(R.string.voice_no_permission)
+        if (granted) startRecording() else showNote(R.string.voice_no_permission)
     }
 
     fun onMicClick() {
@@ -507,7 +538,7 @@ fun ChatScreen(
         amps.clear()
         if (done == null || done.second < 800L) {
             done?.first?.delete()
-            error = ctx.getString(R.string.voice_too_short)
+            showNote(R.string.voice_too_short)
             return
         }
         scope.launch {
@@ -518,9 +549,9 @@ fun ChatScreen(
                 done.first.delete()
                 val t = Api.transcribe(Base64.encodeToString(bytes, Base64.NO_WRAP)).trim()
                 listening = false
-                if (t.isEmpty()) error = ctx.getString(R.string.ai_stt_empty) else sendText(t, true)
+                if (t.isEmpty()) showNote(R.string.ai_stt_empty) else sendText(t, true)
             } catch (e: Exception) {
-                error = errorMessage(ctx, e)
+                showError(e)
             } finally {
                 listening = false
             }
@@ -570,9 +601,15 @@ fun ChatScreen(
 
     // what Candy is doing on the stage: listening to you, thinking, searching the web, sorry when something fails, pleased after a search
     var reaction by remember { mutableStateOf<StagePose?>(null) }
+    LaunchedEffect(note) {
+        if (note.isNotBlank()) {
+            delay(4000)
+            note = ""
+        }
+    }
     var searched by remember { mutableStateOf(false) }
-    LaunchedEffect(error) {
-        if (error.isNotBlank()) {
+    LaunchedEffect(error, failed) {
+        if (error.isNotBlank() || failed != null) {
             reaction = StagePose.Sorry
             delay(3500)
             if (reaction == StagePose.Sorry) reaction = null
@@ -598,14 +635,26 @@ fun ChatScreen(
         else -> StagePose.Idle
     }
 
-    // keep the newest message in view, and keep following it while the reply grows
-    LaunchedEffect(msgs.size, sending, listening) {
-        val total = listState.layoutInfo.totalItemsCount
-        if (total > 0) listState.animateScrollToItem(total - 1)
+    // Follow the newest text only while the reader is at the end. Scrolling up stops it (so older messages can be read
+    // while Candy writes), scrolling back to the end starts it again, and a button offers the way down.
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.isScrollInProgress }.collect { scrolling ->
+            if (autoScrolling) return@collect
+            if (scrolling) {
+                stickToEnd = false
+            } else {
+                stickToEnd = !listState.canScrollForward
+                if (stickToEnd) unseen = false
+            }
+        }
+    }
+    LaunchedEffect(msgs.size, sending, listening, failed, error) {
+        if (stickToEnd) scrollToEnd(animate = true) else unseen = true
     }
     val lastLen = msgs.lastOrNull()?.text?.length ?: 0
     LaunchedEffect(lastLen) {
-        if (sending && listState.layoutInfo.totalItemsCount > 0) listState.scrollBy(1_000_000f)
+        if (!sending) return@LaunchedEffect
+        if (stickToEnd) scrollToEnd(animate = false) else unseen = true
     }
 
     Box(
@@ -652,13 +701,14 @@ fun ChatScreen(
             }
 
             // messages
+            Box(Modifier.weight(1f).fillMaxWidth()) {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp, Alignment.Bottom),
             ) {
-                if (!loading && msgs.isEmpty() && error.isBlank() && !sending) {
+                if (!loading && msgs.isEmpty() && error.isBlank() && failed == null && !sending) {
                     item(key = "empty") {
                         Column(
                             // no box around it: only a soft fade so the text stays readable over the picture
@@ -728,9 +778,31 @@ fun ChatScreen(
                 if ((sending || listening) && (msgs.lastOrNull()?.mine != false)) item(key = "typing") {
                     AiTypingBubble(stringResource(if (listening) R.string.ai_listening else R.string.ai_thinking))
                 }
-                if (error.isNotBlank()) {
-                    item(key = "error") { ErrorText(error) { error = ""; reload() } }
+                failed?.let { f ->
+                    item(key = "failed") {
+                        FailedBubble(
+                            text = f.text,
+                            reason = f.reason,
+                            onResend = { failed = null; pending.addAll(f.files); sendText(f.text, false) },
+                            onEdit = { failed = null; input = f.text; pending.addAll(f.files) },
+                        )
+                    }
                 }
+                if (error.isNotBlank()) {
+                    item(key = "error") {
+                        ErrorCard(error, onRetry = if (errorCanRetry) ({ error = ""; reload() }) else null, onDismiss = { error = "" })
+                    }
+                }
+            }
+            if (!stickToEnd && unseen) {
+                JumpChip(
+                    stringResource(R.string.chat_new_reply),
+                    Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = if (note.isNotBlank()) 64.dp else 8.dp),
+                ) { scope.launch { scrollToEnd(animate = true) } }
+            }
+            if (note.isNotBlank()) {
+                NoteSnack(note, { note = "" }, Modifier.align(Alignment.BottomCenter).padding(horizontal = 12.dp, vertical = 8.dp))
+            }
             }
 
             // the message box, or the bar while you record

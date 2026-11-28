@@ -18,7 +18,7 @@
     <string name="server_address">Server address</string>
     <string name="retry">Try again</string>
     <string name="loading">Loading…</string>
-    <string name="err_network">Can\'t reach the server. Make sure it is running and the address is right.</string>
+    <string name="err_network">No connection. Check your internet and try again.</string>
     <string name="err_daily_limit">You\'ve reached today\'s message limit. Try again tomorrow.</string>
     <string name="err_busy">Candy is still answering your last message.</string>
     <string name="err_reply">Something went wrong and Candy couldn\'t finish her reply.</string>

@@ -1,5 +1,16 @@
 package com.candyai
 
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.foundation.layout.statusBarsPadding
 import android.Manifest
 import android.content.ClipData
@@ -412,6 +423,111 @@ internal fun ResearchCard(steps: List<String>) {
                     )
                 }
             }
+        }
+    }
+}
+
+/** A message that never reached the server: it stays in the chat, marked, with a button to send it again. */
+internal class FailedSend(val text: String, val files: List<Pending>, val reason: String)
+
+@Composable
+internal fun FailedBubble(text: String, reason: String, onResend: () -> Unit, onEdit: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val candy = LocalCandy.current
+    val shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp, bottomEnd = 6.dp, bottomStart = 20.dp)
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val cap = maxWidth * CandyDims.bubbleFraction
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(
+                Modifier.widthIn(max = cap).clip(shape).background(cs.surfaceContainerHigh)
+                    .border(1.5.dp, cs.error, shape).padding(horizontal = 14.dp, vertical = 10.dp),
+            ) { Text(text, color = cs.onSurface, style = MaterialTheme.typography.bodyLarge) }
+            Row(Modifier.widthIn(max = cap), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Icon(Icons.Rounded.Warning, contentDescription = null, tint = cs.error, modifier = Modifier.size(16.dp))
+                Text(stringResource(R.string.msg_not_sent) + " · " + reason, color = cs.error, style = MaterialTheme.typography.labelMedium)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = onResend,
+                    colors = ButtonDefaults.buttonColors(containerColor = candy.cta, contentColor = candy.onCta),
+                    modifier = Modifier.heightIn(min = 44.dp),
+                ) { Text(stringResource(R.string.msg_resend)) }
+                OutlinedButton(
+                    onClick = onEdit,
+                    border = BorderStroke(1.dp, cs.outlineVariant),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = cs.onSurface),
+                    modifier = Modifier.heightIn(min = 44.dp),
+                ) { Text(stringResource(R.string.msg_edit)) }
+            }
+        }
+    }
+}
+
+/** A problem that needs the reader's attention: a card, with "try again" only when trying again can help. */
+@Composable
+internal fun ErrorCard(message: String, onRetry: (() -> Unit)?, onDismiss: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val candy = LocalCandy.current
+    val dark = cs.background.luminance() < 0.5f
+    val accent = if (onRetry != null) cs.error else if (dark) Color(0xFFFFD166) else Color(0xFFC77700)
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = candy.surface,
+        border = BorderStroke(1.dp, candy.border),
+        modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
+    ) {
+        Row(Modifier.height(IntrinsicSize.Min)) {
+            Box(Modifier.width(4.dp).fillMaxHeight().background(accent))
+            Column(Modifier.weight(1f).padding(start = 12.dp, top = 12.dp, bottom = 12.dp)) {
+                Text(message, color = candy.text, style = MaterialTheme.typography.bodyMedium)
+                if (onRetry != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Button(
+                        onClick = onRetry,
+                        colors = ButtonDefaults.buttonColors(containerColor = candy.cta, contentColor = candy.onCta),
+                        modifier = Modifier.heightIn(min = 44.dp),
+                    ) { Text(stringResource(R.string.retry)) }
+                }
+            }
+            AppIconButton(Icons.Rounded.Close, stringResource(R.string.msg_dismiss), onDismiss, tint = candy.subtext)
+        }
+    }
+}
+
+/** A small note that goes away by itself (a file that cannot be read, a recording that was too short...). */
+@Composable
+internal fun NoteSnack(text: String, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+    val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val bg = if (dark) Color(0xFFF3EAFB) else Color(0xFF2B1B20)
+    val fg = if (dark) Color(0xFF210B2C) else Color.White
+    val act = if (dark) Color(0xFFC93A5E) else Color(0xFFFFD166)
+    Surface(shape = RoundedCornerShape(12.dp), color = bg, shadowElevation = 6.dp, modifier = modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }) {
+        Row(Modifier.heightIn(min = 48.dp).padding(start = 14.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(text, color = fg, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f).padding(vertical = 8.dp))
+            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = 44.dp)) {
+                Text(stringResource(R.string.msg_ok), color = act, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+/** Shown while the reader is higher up and something new arrived below: one tap goes to the newest text. */
+@Composable
+internal fun JumpChip(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val candy = LocalCandy.current
+    Surface(
+        shape = CircleShape,
+        color = candy.cta,
+        shadowElevation = 6.dp,
+        modifier = modifier.clip(CircleShape).clickable(role = Role.Button, onClick = onClick),
+    ) {
+        Row(
+            Modifier.heightIn(min = 44.dp).padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = null, tint = candy.onCta)
+            Text(label, color = candy.onCta, style = MaterialTheme.typography.labelLarge)
         }
     }
 }

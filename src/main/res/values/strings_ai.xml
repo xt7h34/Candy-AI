@@ -69,4 +69,10 @@
     <string name="settings_font">الخط</string>
     <string name="settings_font_hint">بيتغير فورًا في التطبيق كله</string>
     <string name="font_sample">كاندي Aa</string>
+    <string name="msg_not_sent">ماتبعتش</string>
+    <string name="msg_resend">إعادة الإرسال</string>
+    <string name="msg_edit">تعديل</string>
+    <string name="msg_dismiss">إغلاق</string>
+    <string name="msg_ok">تمام</string>
+    <string name="chat_new_reply">رد جديد</string>
 </resources>

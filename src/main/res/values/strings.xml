@@ -18,7 +18,7 @@
     <string name="server_address">عنوان السيرفر</string>
     <string name="retry">حاول تاني</string>
     <string name="loading">جاري التحميل…</string>
-    <string name="err_network">مش قادر أوصل للسيرفر. اتأكد إنه شغال وإن العنوان صح.</string>
+    <string name="err_network">مفيش اتصال. اتأكد من الإنترنت وجرّب تاني.</string>
     <string name="err_daily_limit">وصلت للحد اليومي للرسائل. جرّب بكرة.</string>
     <string name="err_busy">كاندي لسه بترد على رسالتك اللي فاتت.</string>
     <string name="err_reply">حصلت مشكلة وكاندي ما قدرتش تكمّل الرد.</string>
